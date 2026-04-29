@@ -1,4 +1,6 @@
-#Glonk's FlingBot
+Glonk's FlingBot
+
+
 yo cuh uh heres full file with settings just make sure to put in ur main acc name its case sensitive dont come whining if it dont work if u got suggestions add my discord or smt: ilikeapples0645
 
 heres the full script:
