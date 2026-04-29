@@ -788,7 +788,7 @@ local function handleCommand(player, msg)
 		end
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .fling [user] .spin [n] .invis .vis .status .rj .re")
+		sendChatMessage(".summon .stop [use if broken] .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .unopp [user] .fling [user] .spin [n] .status .rj .re [broken rn]")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".rj" then
