@@ -165,6 +165,7 @@ local spinSpeed = 5
 local spinAngle = 0
 local isFlinging = false
 local autoFlingEnabled = false
+local isJorking = false
 
 -- DEFAULT VALUES
 local DEFAULT = {
@@ -546,7 +547,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 	if not standHRP or not controllerHRP then return end
 
-	if isFlinging then return end
+	if isFlinging or isJorking then return end
 
 	if isFrozen then
 		standHRP.AssemblyLinearVelocity = Vector3.zero
@@ -625,6 +626,7 @@ local function handleCommand(player, msg)
 		mode = "follow"
 		isFrozen = false
 		isFlinging = false
+		isJorking = false
 		applyPose()
 		createUI("Mode: Follow\nController: " .. player.Name)
 
@@ -634,6 +636,7 @@ local function handleCommand(player, msg)
 		isFlinging = false
 		isSpinning = false
 		autoFlingEnabled = false
+		isJorking = false
 		removePose()
 		sendToSky()
 		createUI("Stand: Stopped\nSent to sky")
@@ -643,6 +646,7 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isFlinging = false
 		isSpinning = false
+		isJorking = false
 		removePose()
 		sendToSky()
 		createUI("Stand: Sent to sky")
@@ -651,12 +655,14 @@ local function handleCommand(player, msg)
 		mode = "idle"
 		isFrozen = false
 		isFlinging = false
+		isJorking = false
 		removePose()
 		createUI("Mode: Idle")
 
 	elseif cmd == ".freeze" then
 		isFrozen = true
 		mode = "idle"
+		isJorking = false
 		createUI("Stand: Frozen")
 
 	elseif cmd == ".orbit" then
@@ -665,6 +671,7 @@ local function handleCommand(player, msg)
 		mode = "orbit"
 		isFrozen = false
 		isFlinging = false
+		isJorking = false
 		applyPose()
 		orbitRadius = (num or 1) * 15
 		createUI("Mode: Orbit r=" .. orbitRadius .. "\nController: " .. player.Name)
@@ -684,6 +691,7 @@ local function handleCommand(player, msg)
 		mode = "behind"
 		isFrozen = false
 		isFlinging = false
+		isJorking = false
 		applyPose()
 		createUI("Mode: Behind\nController: " .. player.Name)
 
@@ -692,6 +700,7 @@ local function handleCommand(player, msg)
 		mode = "above"
 		isFrozen = false
 		isFlinging = false
+		isJorking = false
 		applyPose()
 		createUI("Mode: Above\nController: " .. player.Name)
 
@@ -801,6 +810,7 @@ local function handleCommand(player, msg)
 		isFlinging = true
 		mode = "idle"
 		isFrozen = false
+		isJorking = false
 		createUI("Flinging: " .. target.DisplayName .. "\n5 seconds...")
 		task.spawn(runFling, target)
 
@@ -809,6 +819,27 @@ local function handleCommand(player, msg)
 			isFlinging = false
 			createUI("Fling: Stopped manually")
 		end
+
+	elseif cmd == ".jork" then
+		if isJorking then
+			createUI("Jork: Already jorking!")
+			return
+		end
+		
+		isJorking = true
+		removePose()
+		createUI("Jorking activated!")
+		
+		-- Detect R6 or R15
+		local isR6 = stand.Character:FindFirstChild("Torso") ~= nil
+		
+		task.spawn(function()
+			if isR6 then
+				loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
+			else
+				loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
+			end
+		end)
 
 	elseif cmd == ".speed" then
 		local num = tonumber(args[2])
@@ -832,34 +863,12 @@ local function handleCommand(player, msg)
 		isSpinning = false
 		createUI("Stand: Spin Stopped")
 
-	elseif cmd == ".invis" then
-		if stand.Character then
-			for _, part in ipairs(stand.Character:GetDescendants()) do
-				if part:IsA("BasePart") or part:IsA("Decal") then
-					part.Transparency = 1
-				end
-			end
-			createUI("Stand: Invisible")
-		end
-
-	elseif cmd == ".vis" then
-		if stand.Character then
-			for _, part in ipairs(stand.Character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.Transparency = part.Name == "HumanoidRootPart" and 1 or 0
-				elseif part:IsA("Decal") then
-					part.Transparency = 0
-				end
-			end
-			createUI("Stand: Visible")
-		end
-
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .fling [user] .spin [n]  .status .rj .re[broken rn] .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .fling [user] .spin [n] .status .jork .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
-		sendChatMessage("I am using Glonk's FlingBot made by glonk and a tiny bit by xDa")
+		sendChatMessage("I am using Glonk's FlingBot made by glonk")
 		createUI("Script message sent!")
 
 	elseif cmd == ".rj" then
@@ -873,7 +882,11 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isFlinging = false
 		isSpinning = false
+		isJorking = false
+		autoFlingEnabled = false
 		currentController = host
+		oppList = {}
+		whitelistedUsers = {}
 		createUI("Stand: Respawning...")
 		stand:LoadCharacter()
 
@@ -885,6 +898,7 @@ local function handleCommand(player, msg)
 		if isFrozen then statusMsg = statusMsg .. "\nFrozen: Yes" end
 		if isSpinning then statusMsg = statusMsg .. "\nSpinning: " .. spinSpeed end
 		if isFlinging then statusMsg = statusMsg .. "\nFlinging: Active" end
+		if isJorking then statusMsg = statusMsg .. "\nJorking: Active" end
 		if autoFlingEnabled then statusMsg = statusMsg .. "\nAuto-Fling: ON" end
 		local wlCount = 0
 		for _ in pairs(whitelistedUsers) do wlCount += 1 end
@@ -912,8 +926,11 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isSpinning = false
 		isFlinging = false
+		isJorking = false
 		autoFlingEnabled = false
 		currentController = host
+		oppList = {}
+		whitelistedUsers = {}
 		removePose()
 		createUI("Stand: Reset to Defaults")
 	end
