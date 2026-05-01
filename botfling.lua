@@ -165,7 +165,7 @@ local spinSpeed = 5
 local spinAngle = 0
 local isFlinging = false
 local autoFlingEnabled = false
-local isJorking = false
+local currentFlingTarget = nil
 
 -- DEFAULT VALUES
 local DEFAULT = {
@@ -494,6 +494,7 @@ end
 
 local function endFling()
 	isFlinging = false
+	currentFlingTarget = nil
 	if modeBeforeFling == "follow" then
 		mode = "follow"
 		applyPose()
@@ -507,8 +508,13 @@ end
 
 local function runFling(target)
 	removePose()
+	currentFlingTarget = target
 	local elapsed = 0
 	while isFlinging and elapsed < 5 do
+		-- Check if target still exists
+		if not target or not target.Parent or not target.Character then
+			break
+		end
 		local before = tick()
 		SkidFling(target)
 		elapsed += tick() - before
@@ -517,21 +523,30 @@ local function runFling(target)
 	endFling()
 end
 
--- AUTO FLING LOOP (checks for opp list members)
+-- AUTO FLING LOOP (checks for opp list members) - FIXED
 task.spawn(function()
-	while task.wait(1) do
+	while task.wait(2) do
 		if autoFlingEnabled and not isFlinging then
+			-- Create a stable copy of the opp list
+			local oppListCopy = {}
 			for playerName, _ in pairs(oppList) do
-				local target = Players:FindFirstChild(playerName)
-				if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-					modeBeforeFling = mode
-					isFlinging = true
-					mode = "idle"
-					isFrozen = false
-					createUI("Auto-Fling: " .. target.DisplayName)
-					runFling(target)
-					task.wait(6)
-					break
+				oppListCopy[playerName] = true
+			end
+			
+			for playerName, _ in pairs(oppListCopy) do
+				-- Verify player still in opp list (might have been removed)
+				if oppList[playerName] then
+					local target = Players:FindFirstChild(playerName)
+					if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+						modeBeforeFling = mode
+						isFlinging = true
+						mode = "idle"
+						isFrozen = false
+						createUI("Auto-Fling: " .. target.DisplayName)
+						runFling(target)
+						task.wait(7)
+						break
+					end
 				end
 			end
 		end
@@ -547,7 +562,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 	if not standHRP or not controllerHRP then return end
 
-	if isFlinging or isJorking then return end
+	if isFlinging then return end
 
 	if isFrozen then
 		standHRP.AssemblyLinearVelocity = Vector3.zero
@@ -626,7 +641,6 @@ local function handleCommand(player, msg)
 		mode = "follow"
 		isFrozen = false
 		isFlinging = false
-		isJorking = false
 		applyPose()
 		createUI("Mode: Follow\nController: " .. player.Name)
 
@@ -636,7 +650,7 @@ local function handleCommand(player, msg)
 		isFlinging = false
 		isSpinning = false
 		autoFlingEnabled = false
-		isJorking = false
+		currentFlingTarget = nil
 		removePose()
 		sendToSky()
 		createUI("Stand: Stopped\nSent to sky")
@@ -646,7 +660,7 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isFlinging = false
 		isSpinning = false
-		isJorking = false
+		currentFlingTarget = nil
 		removePose()
 		sendToSky()
 		createUI("Stand: Sent to sky")
@@ -655,14 +669,13 @@ local function handleCommand(player, msg)
 		mode = "idle"
 		isFrozen = false
 		isFlinging = false
-		isJorking = false
+		currentFlingTarget = nil
 		removePose()
 		createUI("Mode: Idle")
 
 	elseif cmd == ".freeze" then
 		isFrozen = true
 		mode = "idle"
-		isJorking = false
 		createUI("Stand: Frozen")
 
 	elseif cmd == ".orbit" then
@@ -671,7 +684,6 @@ local function handleCommand(player, msg)
 		mode = "orbit"
 		isFrozen = false
 		isFlinging = false
-		isJorking = false
 		applyPose()
 		orbitRadius = (num or 1) * 15
 		createUI("Mode: Orbit r=" .. orbitRadius .. "\nController: " .. player.Name)
@@ -691,7 +703,6 @@ local function handleCommand(player, msg)
 		mode = "behind"
 		isFrozen = false
 		isFlinging = false
-		isJorking = false
 		applyPose()
 		createUI("Mode: Behind\nController: " .. player.Name)
 
@@ -700,7 +711,6 @@ local function handleCommand(player, msg)
 		mode = "above"
 		isFrozen = false
 		isFlinging = false
-		isJorking = false
 		applyPose()
 		createUI("Mode: Above\nController: " .. player.Name)
 
@@ -767,17 +777,51 @@ local function handleCommand(player, msg)
 		createUI("Removed from Opp List:\n" .. target.DisplayName)
 
 	elseif cmd == ".fling" then
-		-- FIX: Force stop any stuck fling state
+		-- Force stop any stuck fling state
 		if isFlinging then
 			isFlinging = false
 			task.wait(0.5)
 		end
 		
-		local query = table.concat(args, " ", 2)
+		local query = table.concat(args, " ", 2):lower()
 		if query == "" then
-			createUI("Usage: .fling <name>")
+			createUI("Usage: .fling <name> or .fling all")
 			return
 		end
+		
+		-- Check for "all" keyword
+		if query == "all" then
+			local flingQueue = {}
+			for _, plr in ipairs(Players:GetPlayers()) do
+				-- Skip host, stand, and whitelisted players
+				if plr ~= host and plr ~= stand and not whitelistedUsers[plr.Name] then
+					if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+						table.insert(flingQueue, plr)
+					end
+				end
+			end
+			
+			if #flingQueue == 0 then
+				createUI("Fling All: No valid targets")
+				return
+			end
+			
+			createUI("Flinging " .. #flingQueue .. " players...")
+			task.spawn(function()
+				for _, target in ipairs(flingQueue) do
+					if not isFlinging then break end
+					modeBeforeFling = mode
+					isFlinging = true
+					mode = "idle"
+					isFrozen = false
+					runFling(target)
+					task.wait(6)
+				end
+			end)
+			return
+		end
+		
+		-- Single target fling
 		local target = findPlayer(query)
 		if not target then
 			createUI("Fling: Player not found\n\"" .. query .. "\"")
@@ -790,13 +834,11 @@ local function handleCommand(player, msg)
 		
 		-- BETRAYAL PROTECTION: Check if whitelisted user is trying to fling the host
 		if player ~= host and target == host then
-			-- 1. Unwhitelist the traitor
+			-- ONLY unwhitelist the traitor, not everyone
 			whitelistedUsers[player.Name] = nil
 			
-			-- 2. Send betrayal message to chat
 			sendChatMessage(player.DisplayName .. " tried to betray the host by flinging them, they got unwhitelisted.")
 			
-			-- 3. Fling the traitor instead
 			modeBeforeFling = mode
 			isFlinging = true
 			mode = "idle"
@@ -810,36 +852,15 @@ local function handleCommand(player, msg)
 		isFlinging = true
 		mode = "idle"
 		isFrozen = false
-		isJorking = false
 		createUI("Flinging: " .. target.DisplayName .. "\n5 seconds...")
 		task.spawn(runFling, target)
 
 	elseif cmd == ".stopfling" then
 		if isFlinging then
 			isFlinging = false
+			currentFlingTarget = nil
 			createUI("Fling: Stopped manually")
 		end
-
-	elseif cmd == ".jork" then
-		if isJorking then
-			createUI("Jork: Already jorking!")
-			return
-		end
-		
-		isJorking = true
-		removePose()
-		createUI("Jorking activated!")
-		
-		-- Detect R6 or R15
-		local isR6 = stand.Character:FindFirstChild("Torso") ~= nil
-		
-		task.spawn(function()
-			if isR6 then
-				loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
-			else
-				loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
-			end
-		end)
 
 	elseif cmd == ".speed" then
 		local num = tonumber(args[2])
@@ -864,7 +885,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .fling [user] .spin [n] .status .jork .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .status .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
@@ -877,18 +898,14 @@ local function handleCommand(player, msg)
 		TeleportService:Teleport(game.PlaceId, stand)
 
 	elseif cmd == ".re" then
-		removePose()
-		mode = "idle"
-		isFrozen = false
-		isFlinging = false
-		isSpinning = false
-		isJorking = false
-		autoFlingEnabled = false
-		currentController = host
-		oppList = {}
-		whitelistedUsers = {}
-		createUI("Stand: Respawning...")
-		stand:LoadCharacter()
+		createUI("Resetting character...")
+		task.wait(0.5)
+		if stand.Character then
+			local humanoid = stand.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.Health = 0
+			end
+		end
 
 	elseif cmd == ".status" then
 		local statusMsg = "Mode: " .. mode
@@ -897,8 +914,12 @@ local function handleCommand(player, msg)
 		end
 		if isFrozen then statusMsg = statusMsg .. "\nFrozen: Yes" end
 		if isSpinning then statusMsg = statusMsg .. "\nSpinning: " .. spinSpeed end
-		if isFlinging then statusMsg = statusMsg .. "\nFlinging: Active" end
-		if isJorking then statusMsg = statusMsg .. "\nJorking: Active" end
+		if isFlinging then 
+			statusMsg = statusMsg .. "\nFlinging: Active"
+			if currentFlingTarget then
+				statusMsg = statusMsg .. " (" .. currentFlingTarget.DisplayName .. ")"
+			end
+		end
 		if autoFlingEnabled then statusMsg = statusMsg .. "\nAuto-Fling: ON" end
 		local wlCount = 0
 		for _ in pairs(whitelistedUsers) do wlCount += 1 end
@@ -926,9 +947,9 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isSpinning = false
 		isFlinging = false
-		isJorking = false
 		autoFlingEnabled = false
 		currentController = host
+		currentFlingTarget = nil
 		oppList = {}
 		whitelistedUsers = {}
 		removePose()
