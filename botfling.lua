@@ -11,9 +11,6 @@ local FOLLOW_SPEED = _G.FOLLOW_SPEED or 0.3
 local ORBIT_SPEED = _G.ORBIT_SPEED or 2
 local ORBIT_HEIGHT = _G.ORBIT_HEIGHT or 3
 
--- WALL SPOT
-local WALL_POSITION = Vector3.new(310, 671, 407)
-
 -- FLING GLOBALS
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
@@ -57,6 +54,7 @@ local function createWatermark()
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	
+	-- Main Frame
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(0, 300, 0, 80)
 	frame.Position = UDim2.new(0.5, -150, 0, 10)
@@ -64,10 +62,12 @@ local function createWatermark()
 	frame.BorderSizePixel = 0
 	frame.Parent = gui
 	
+	-- Corner rounding
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 8)
 	corner.Parent = frame
 	
+	-- Title
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, 0, 0, 30)
 	title.Position = UDim2.new(0, 0, 0, 5)
@@ -78,6 +78,7 @@ local function createWatermark()
 	title.TextSize = 20
 	title.Parent = frame
 	
+	-- Discord Button
 	local discordBtn = Instance.new("TextButton")
 	discordBtn.Size = UDim2.new(0, 260, 0, 35)
 	discordBtn.Position = UDim2.new(0.5, -130, 0, 40)
@@ -93,6 +94,7 @@ local function createWatermark()
 	btnCorner.CornerRadius = UDim.new(0, 6)
 	btnCorner.Parent = discordBtn
 	
+	-- Button click handler
 	discordBtn.MouseButton1Click:Connect(function()
 		setclipboard("https://discord.gg/DJuKxGVAck")
 		discordBtn.Text = "Copied!"
@@ -128,6 +130,7 @@ local function createUI(text)
 	end)
 end
 
+-- Send message to chat
 local function sendChatMessage(text)
 	local textChatService = game:GetService("TextChatService")
 	if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
@@ -181,83 +184,113 @@ local function sendToSky()
 	end
 end
 
+-- Apply snow angel pose using Humanoid properties (visible to all players)
 local function applyPose()
 	if not stand.Character then return end
+	
 	local humanoid = stand.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
+	
+	-- Disable default animations
 	for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
 		track:Stop()
 	end
+	
+	-- Create custom animator pose
 	local animateScript = stand.Character:FindFirstChild("Animate")
 	if animateScript then
 		animateScript.Disabled = true
 	end
+	
+	-- R6 Character
 	if stand.Character:FindFirstChild("Torso") then
 		local torso = stand.Character.Torso
 		local leftShoulder = torso:FindFirstChild("Left Shoulder")
 		local rightShoulder = torso:FindFirstChild("Right Shoulder")
 		local leftHip = torso:FindFirstChild("Left Hip")
 		local rightHip = torso:FindFirstChild("Right Hip")
+		
 		if leftShoulder then
 			leftShoulder.C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(math.rad(0), math.rad(-90), math.rad(-70))
 		end
+		
 		if rightShoulder then
 			rightShoulder.C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(math.rad(0), math.rad(90), math.rad(70))
 		end
+		
 		if leftHip then
 			leftHip.C0 = CFrame.new(-1, -1, 0) * CFrame.Angles(math.rad(0), math.rad(-90), math.rad(-20))
 		end
+		
 		if rightHip then
 			rightHip.C0 = CFrame.new(1, -1, 0) * CFrame.Angles(math.rad(0), math.rad(90), math.rad(20))
 		end
+	-- R15 Character
 	else
 		local torso = stand.Character:FindFirstChild("UpperTorso")
 		if not torso then return end
+		
 		local leftShoulder = torso:FindFirstChild("LeftShoulder")
 		local rightShoulder = torso:FindFirstChild("RightShoulder")
+		local waist = torso:FindFirstChild("Waist")
+		
 		local lowerTorso = stand.Character:FindFirstChild("LowerTorso")
 		local leftHip = lowerTorso and lowerTorso:FindFirstChild("LeftHip")
 		local rightHip = lowerTorso and lowerTorso:FindFirstChild("RightHip")
+		
 		if leftShoulder then
 			leftShoulder.C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(math.rad(0), math.rad(-90), math.rad(-70))
 		end
+		
 		if rightShoulder then
 			rightShoulder.C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(math.rad(0), math.rad(90), math.rad(70))
 		end
+		
 		if leftHip then
 			leftHip.C0 = CFrame.new(-1, -1, 0) * CFrame.Angles(math.rad(0), math.rad(-90), math.rad(-20))
 		end
+		
 		if rightHip then
 			rightHip.C0 = CFrame.new(1, -1, 0) * CFrame.Angles(math.rad(0), math.rad(90), math.rad(20))
 		end
 	end
 end
 
+-- Remove pose and restore defaults
 local function removePose()
 	if not stand.Character then return end
+	
 	local humanoid = stand.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 	end
+	
+	-- Re-enable animations
 	local animateScript = stand.Character:FindFirstChild("Animate")
 	if animateScript then
 		animateScript.Disabled = false
 	end
+	
+	-- Reset joints to default
 	if stand.Character:FindFirstChild("Torso") then
 		local torso = stand.Character.Torso
 		local leftShoulder = torso:FindFirstChild("Left Shoulder")
 		local rightShoulder = torso:FindFirstChild("Right Shoulder")
 		local leftHip = torso:FindFirstChild("Left Hip")
 		local rightHip = torso:FindFirstChild("Right Hip")
+		
 		if leftShoulder then
 			leftShoulder.C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(0, math.rad(-90), 0)
 		end
+		
 		if rightShoulder then
 			rightShoulder.C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(0, math.rad(90), 0)
 		end
+		
 		if leftHip then
 			leftHip.C0 = CFrame.new(-1, -1, 0) * CFrame.Angles(0, math.rad(-90), 0)
 		end
+		
 		if rightHip then
 			rightHip.C0 = CFrame.new(1, -1, 0) * CFrame.Angles(0, math.rad(90), 0)
 		end
@@ -266,20 +299,25 @@ local function removePose()
 		if torso then
 			local leftShoulder = torso:FindFirstChild("LeftShoulder")
 			local rightShoulder = torso:FindFirstChild("RightShoulder")
+			
 			if leftShoulder then
 				leftShoulder.C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(0, math.rad(-90), 0)
 			end
+			
 			if rightShoulder then
 				rightShoulder.C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(0, math.rad(90), 0)
 			end
 		end
+		
 		local lowerTorso = stand.Character:FindFirstChild("LowerTorso")
 		if lowerTorso then
 			local leftHip = lowerTorso:FindFirstChild("LeftHip")
 			local rightHip = lowerTorso:FindFirstChild("RightHip")
+			
 			if leftHip then
 				leftHip.C0 = CFrame.new(-1, -1, 0) * CFrame.Angles(0, math.rad(-90), 0)
 			end
+			
 			if rightHip then
 				rightHip.C0 = CFrame.new(1, -1, 0) * CFrame.Angles(0, math.rad(90), 0)
 			end
@@ -287,50 +325,76 @@ local function removePose()
 	end
 end
 
+-- Check if player is authorized (host or whitelisted)
 local function isAuthorized(player)
 	if player == host then return true end
 	return whitelistedUsers[player.Name] ~= nil
 end
 
+-- Universal player finder (checks display name first, then username, both partial and exact)
 local function findPlayer(query)
 	query = query:lower()
+	local target = nil
+	
+	-- Pass 1: Exact display name match
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr.DisplayName:lower() == query then return plr end
+		if plr.DisplayName:lower() == query then
+			return plr
+		end
 	end
+	
+	-- Pass 2: Partial display name match (starts with)
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if string.sub(plr.DisplayName:lower(), 1, #query) == query then return plr end
+		if string.sub(plr.DisplayName:lower(), 1, #query) == query then
+			return plr
+		end
 	end
+	
+	-- Pass 3: Exact username match
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr.Name:lower() == query then return plr end
+		if plr.Name:lower() == query then
+			return plr
+		end
 	end
+	
+	-- Pass 4: Partial username match (starts with)
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if string.sub(plr.Name:lower(), 1, #query) == query then return plr end
+		if string.sub(plr.Name:lower(), 1, #query) == query then
+			return plr
+		end
 	end
+	
 	return nil
 end
 
+-- SKID FLING FUNCTION
 local function SkidFling(TargetPlayer)
 	local Character = stand.Character
 	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
 	local RootPart = Humanoid and Humanoid.RootPart
 	local TCharacter = TargetPlayer.Character
 	if not TCharacter then return end
+
 	local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
 	local TRootPart = THumanoid and THumanoid.RootPart
 	local THead = TCharacter:FindFirstChild("Head")
 	local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
 	local Handle = Accessory and Accessory:FindFirstChild("Handle")
+
 	if not (Character and Humanoid and RootPart) then
 		createUI("Fling: Stand not ready")
 		return
 	end
+
 	if RootPart.Velocity.Magnitude < 50 then
 		getgenv().OldPos = RootPart.CFrame
 	end
+
 	if THumanoid and THumanoid.Sit then
 		createUI("Fling: Target is sitting")
 		return
 	end
+
 	if THead then
 		workspace.CurrentCamera.CameraSubject = THead
 	elseif Handle then
@@ -338,13 +402,16 @@ local function SkidFling(TargetPlayer)
 	elseif THumanoid then
 		workspace.CurrentCamera.CameraSubject = THumanoid
 	end
+
 	if not TCharacter:FindFirstChildWhichIsA("BasePart") then return end
+
 	local function FPos(BasePart, Pos, Ang)
 		RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
 		Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
 		RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
 		RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
 	end
+
 	local function SFBasePart(BasePart)
 		local TimeToWait = 2
 		local Time = tick()
@@ -384,12 +451,16 @@ local function SkidFling(TargetPlayer)
 			end
 		until Time + TimeToWait < tick() or not isFlinging
 	end
+
 	workspace.FallenPartsDestroyHeight = 0/0
+
 	local BV = Instance.new("BodyVelocity")
 	BV.Parent = RootPart
 	BV.Velocity = Vector3.new(0, 0, 0)
 	BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+
 	if TRootPart then
 		SFBasePart(TRootPart)
 	elseif THead then
@@ -399,9 +470,11 @@ local function SkidFling(TargetPlayer)
 	else
 		createUI("Fling: No valid parts")
 	end
+
 	BV:Destroy()
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
 	workspace.CurrentCamera.CameraSubject = Humanoid
+
 	if getgenv().OldPos then
 		repeat
 			RootPart.CFrame = getgenv().OldPos * CFrame.new(0, 0.5, 0)
@@ -438,6 +511,7 @@ local function runFling(target)
 	currentFlingTarget = target
 	local elapsed = 0
 	while isFlinging and elapsed < 5 do
+		-- Check if target still exists
 		if not target or not target.Parent or not target.Character then
 			break
 		end
@@ -449,15 +523,18 @@ local function runFling(target)
 	endFling()
 end
 
--- AUTO FLING LOOP
+-- AUTO FLING LOOP (checks for opp list members) - FIXED
 task.spawn(function()
 	while task.wait(2) do
 		if autoFlingEnabled and not isFlinging then
+			-- Create a stable copy of the opp list
 			local oppListCopy = {}
 			for playerName, _ in pairs(oppList) do
 				oppListCopy[playerName] = true
 			end
+			
 			for playerName, _ in pairs(oppListCopy) do
+				-- Verify player still in opp list (might have been removed)
 				if oppList[playerName] then
 					local target = Players:FindFirstChild(playerName)
 					if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
@@ -480,19 +557,27 @@ end)
 RunService.Heartbeat:Connect(function(dt)
 	if not stand.Character then return end
 	if not currentController or not currentController.Character then return end
+	
 	local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 	local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 	if not standHRP or not controllerHRP then return end
+
 	if isFlinging then return end
+
 	if isFrozen then
 		standHRP.AssemblyLinearVelocity = Vector3.zero
 		standHRP.AssemblyAngularVelocity = Vector3.zero
 		return
 	end
+
+	-- Update floating animation
 	floatOffset += floatSpeed * dt
+
+	-- Spinning can happen independently of movement mode
 	if isSpinning then
 		spinAngle += spinSpeed * dt * 60
 	end
+
 	if mode == "follow" then
 		local floatY = math.sin(floatOffset) * 0.5
 		local targetCF =
@@ -537,13 +622,83 @@ RunService.Heartbeat:Connect(function(dt)
 			standHRP.CFrame = spinCF
 		end
 	end
+
 	standHRP.AssemblyLinearVelocity = Vector3.zero
 	standHRP.AssemblyAngularVelocity = Vector3.zero
 end)
 
+-- TPWALL FUNCTION (Flowing Water move)
+local function tpWall(targetPlayer)
+	if not stand.Character then
+		createUI("TPWall: Stand not ready")
+		return
+	end
+	
+	local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
+	if not standHRP then
+		createUI("TPWall: No HumanoidRootPart")
+		return
+	end
+	
+	if not targetPlayer.Character then
+		createUI("TPWall: Target has no character")
+		return
+	end
+	
+	local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not targetHRP then
+		createUI("TPWall: Target has no HumanoidRootPart")
+		return
+	end
+	
+	-- Save current position
+	local savedPos = standHRP.CFrame
+	
+	-- TP behind target
+	local behindPos = targetHRP.CFrame * CFrame.new(0, 0, 5)
+	standHRP.CFrame = behindPos
+	
+	task.wait(0.1)
+	
+	-- Equip Hero Hunter and use Flowing Water
+	local backpack = stand:FindFirstChild("Backpack")
+	if not backpack then
+		createUI("TPWall: No Backpack found")
+		standHRP.CFrame = savedPos
+		return
+	end
+	
+	local heroHunter = backpack:FindFirstChild("Hero Hunter")
+	if not heroHunter then
+		createUI("TPWall: Hero Hunter not found")
+		standHRP.CFrame = savedPos
+		return
+	end
+	
+	-- Equip the tool
+	stand.Character.Humanoid:EquipTool(heroHunter)
+	task.wait(0.2)
+	
+	-- Activate Flowing Water
+	local flowingWater = heroHunter:FindFirstChild("FlowingWater")
+	if flowingWater and flowingWater:IsA("RemoteEvent") then
+		flowingWater:FireServer()
+		createUI("TPWall: Flowing Water activated!")
+	else
+		createUI("TPWall: Flowing Water not found")
+	end
+	
+	task.wait(0.5)
+	
+	-- Unequip
+	stand.Character.Humanoid:UnequipTools()
+end
+
 -- COMMAND HANDLER
 local function handleCommand(player, msg)
+	-- Only process if authorized
 	if not isAuthorized(player) then return end
+	
 	print("[COMMAND from " .. player.Name .. "]:", msg)
 	local args = string.split(msg, " ")
 	local cmd = args[1]
@@ -610,41 +765,6 @@ local function handleCommand(player, msg)
 			end
 		end
 
-	elseif cmd == ".tpwall" then
-		if not stand.Character or not player.Character then return end
-		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
-		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
-		if not standHRP or not playerHRP then return end
-
-		createUI("Wall move incoming!")
-		task.spawn(function()
-			-- Step 1: Teleport stand behind the caller
-			local behindCF = playerHRP.CFrame * CFrame.new(0, 0, 3)
-			standHRP.CFrame = behindCF
-
-			task.wait(0.3)
-
-			-- Step 2: Fire keybind 1 (Flowing Water)
-			local uis = game:GetService("UserInputService")
-			local input = Instance.new("InputObject")
-			input.KeyCode = Enum.KeyCode.One
-			input.UserInputType = Enum.UserInputType.Keyboard
-			fireclickdetector = fireclickdetector or function() end
-			-- Use keypress simulation
-			local vInputService = game:GetService("VirtualInputManager")
-			if vInputService then
-				vInputService:SendKeyEvent(true, Enum.KeyCode.One, false, game)
-				task.wait(0.1)
-				vInputService:SendKeyEvent(false, Enum.KeyCode.One, false, game)
-			end
-
-			task.wait(0.5)
-
-			-- Step 3: Teleport stand to wall position
-			standHRP.CFrame = CFrame.new(WALL_POSITION)
-			createUI("Stand sent to wall!")
-		end)
-
 	elseif cmd == ".behind" then
 		currentController = player
 		mode = "behind"
@@ -662,6 +782,12 @@ local function handleCommand(player, msg)
 		createUI("Mode: Above\nController: " .. player.Name)
 
 	elseif cmd == ".wl" then
+		-- ONLY HOST CAN WHITELIST
+		if player ~= host then
+			createUI("Whitelist: Only host can whitelist")
+			return
+		end
+		
 		local query = table.concat(args, " ", 2)
 		if query == "" then
 			createUI("Usage: .wl <username>")
@@ -700,6 +826,23 @@ local function handleCommand(player, msg)
 			createUI("Opp: Player not found\n\"" .. query .. "\"")
 			return
 		end
+		
+		-- BETRAYAL PROTECTION FOR .OPP
+		if player ~= host and target == host then
+			-- Unwhitelist the traitor
+			whitelistedUsers[player.Name] = nil
+			
+			-- Send betrayal message
+			sendChatMessage(player.DisplayName .. " tried to betray the host by adding them to opp list, they got unwhitelisted.")
+			
+			-- Add traitor to opp list instead
+			oppList[player.Name] = true
+			autoFlingEnabled = true
+			
+			createUI("BETRAYAL DETECTED!\nAdded traitor to opp: " .. player.DisplayName)
+			return
+		end
+		
 		oppList[target.Name] = true
 		autoFlingEnabled = true
 		createUI("Added to Opp List:\n" .. target.DisplayName .. "\nAuto-fling: ON")
@@ -724,28 +867,35 @@ local function handleCommand(player, msg)
 		createUI("Removed from Opp List:\n" .. target.DisplayName)
 
 	elseif cmd == ".fling" then
+		-- Force stop any stuck fling state
 		if isFlinging then
 			isFlinging = false
 			task.wait(0.5)
 		end
+		
 		local query = table.concat(args, " ", 2):lower()
 		if query == "" then
 			createUI("Usage: .fling <name> or .fling all")
 			return
 		end
+		
+		-- Check for "all" keyword
 		if query == "all" then
 			local flingQueue = {}
 			for _, plr in ipairs(Players:GetPlayers()) do
+				-- Skip host, stand, and whitelisted players
 				if plr ~= host and plr ~= stand and not whitelistedUsers[plr.Name] then
 					if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 						table.insert(flingQueue, plr)
 					end
 				end
 			end
+			
 			if #flingQueue == 0 then
 				createUI("Fling All: No valid targets")
 				return
 			end
+			
 			createUI("Flinging " .. #flingQueue .. " players...")
 			task.spawn(function()
 				for _, target in ipairs(flingQueue) do
@@ -760,6 +910,8 @@ local function handleCommand(player, msg)
 			end)
 			return
 		end
+		
+		-- Single target fling
 		local target = findPlayer(query)
 		if not target then
 			createUI("Fling: Player not found\n\"" .. query .. "\"")
@@ -769,9 +921,14 @@ local function handleCommand(player, msg)
 			createUI("Fling: " .. target.DisplayName .. " has no character")
 			return
 		end
+		
+		-- BETRAYAL PROTECTION: Check if whitelisted user is trying to fling the host
 		if player ~= host and target == host then
+			-- ONLY unwhitelist the traitor
 			whitelistedUsers[player.Name] = nil
+			
 			sendChatMessage(player.DisplayName .. " tried to betray the host by flinging them, they got unwhitelisted.")
+			
 			modeBeforeFling = mode
 			isFlinging = true
 			mode = "idle"
@@ -780,6 +937,7 @@ local function handleCommand(player, msg)
 			task.spawn(runFling, player)
 			return
 		end
+		
 		modeBeforeFling = mode
 		isFlinging = true
 		mode = "idle"
@@ -793,6 +951,9 @@ local function handleCommand(player, msg)
 			currentFlingTarget = nil
 			createUI("Fling: Stopped manually")
 		end
+
+	elseif cmd == ".tpwall" then
+		tpWall(player)
 
 	elseif cmd == ".speed" then
 		local num = tonumber(args[2])
@@ -817,7 +978,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall (use garou,only tsb) .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .status .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .tpwall .status .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
@@ -846,7 +1007,7 @@ local function handleCommand(player, msg)
 		end
 		if isFrozen then statusMsg = statusMsg .. "\nFrozen: Yes" end
 		if isSpinning then statusMsg = statusMsg .. "\nSpinning: " .. spinSpeed end
-		if isFlinging then
+		if isFlinging then 
 			statusMsg = statusMsg .. "\nFlinging: Active"
 			if currentFlingTarget then
 				statusMsg = statusMsg .. " (" .. currentFlingTarget.DisplayName .. ")"
@@ -894,7 +1055,7 @@ host.Chatted:Connect(function(msg)
 	handleCommand(host, msg)
 end)
 
--- Connect all player commands
+-- Connect all player commands (authorization checked inside handler)
 Players.PlayerAdded:Connect(function(player)
 	player.Chatted:Connect(function(msg)
 		handleCommand(player, msg)
