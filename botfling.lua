@@ -576,7 +576,7 @@ local function handleCommand(player, msg)
 			end
 		end
 
-	elseif cmd == ".tpwall" then
+	elseif cmd == ".tpwall1" then
 		if not stand.Character or not player.Character then return end
 		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
@@ -591,7 +591,7 @@ local function handleCommand(player, msg)
 			createUI("Stand sent to wall!")
 		end)
 
-	elseif cmd == ".tpwall2" then
+	elseif cmd == ".tpwall12" then
 		if not stand.Character or not player.Character then return end
 		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
@@ -606,7 +606,7 @@ local function handleCommand(player, msg)
 			createUI("Stand sent to wall!")
 		end)
 
-	elseif cmd == ".tpwall3" then
+	elseif cmd == ".tpwall13" then
 		if not stand.Character or not player.Character then return end
 		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
@@ -758,7 +758,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall12 .tpwall13 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
