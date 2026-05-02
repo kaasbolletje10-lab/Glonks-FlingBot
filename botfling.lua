@@ -13,7 +13,7 @@ local ORBIT_SPEED = _G.ORBIT_SPEED or 2
 local ORBIT_HEIGHT = _G.ORBIT_HEIGHT or 3
 
 -- WALL SPOT
-local WALL_POSITION = Vector3.new(310, 671, 407)
+local WALL_POSITION = Vector3.new(310, 671, 457)
 
 -- SKILL KEYBINDS
 local skillKeys = {
@@ -758,7 +758,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
