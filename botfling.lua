@@ -38,7 +38,7 @@ local skillCooldowns = {
 	["4"] = 20,
 }
 
--- SKILL RANGES (studs, multiplied by 5)
+-- SKILL RANGES (multiplied by 5 per unit)
 local skillRanges = {
 	["1"] = 3,
 	["2"] = 3,
@@ -53,7 +53,7 @@ local saidCD = {}
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
--- OWNER MODE (on by default = owners can control bots)
+-- OWNER MODE
 local ownerModeEnabled = true
 
 local function getPlayerExact(username)
@@ -96,7 +96,6 @@ local currentController = host
 local floatOffset = 0
 local floatSpeed = 2
 
--- WATERMARK GUI
 local function createWatermark()
 	local playerGui = stand:WaitForChild("PlayerGui")
 	local existing = playerGui:FindFirstChild("FlingBotWatermark")
@@ -521,10 +520,10 @@ end)
 
 -- COMMAND HANDLER
 local function handleCommand(player, msg)
-	-- .owneron and .owneroff can only be used by owners themselves
 	local args = string.split(msg, " ")
 	local cmd = args[1]
 
+	-- OWNER ONLY COMMANDS (work even when ownermode is off)
 	if cmd == ".owneron" then
 		if not isOwner(player.Name) then return end
 		ownerModeEnabled = true
@@ -746,7 +745,6 @@ local function handleCommand(player, msg)
 		if query == "" then createUI("Usage: .opp <username>") return end
 		local target = findPlayer(query)
 		if not target then createUI("Opp: Player not found\n\"" .. query .. "\"") return end
-		-- Owners cannot be added to opp list
 		if isOwner(target.Name) then
 			createUI("Cannot opp an owner!")
 			return
@@ -813,7 +811,7 @@ local function handleCommand(player, msg)
 		if not target then createUI("Fling: Player not found\n\"" .. query .. "\"") return end
 		if not target.Character then createUI("Fling: " .. target.DisplayName .. " has no character") return end
 
-		-- Owners cannot be flung by anyone
+		-- Owner protection
 		if isOwner(target.Name) then
 			local ownerDisplayName = getOwnerDisplay(target.Name)
 			sendChatMessage(player.DisplayName .. " tried to fling " .. ownerDisplayName .. ". Nice try.")
@@ -825,7 +823,7 @@ local function handleCommand(player, msg)
 			return
 		end
 
-		-- Betrayal protection: non-host trying to fling host
+		-- Betrayal protection
 		if player ~= host and not isOwner(player.Name) and target == host then
 			whitelistedUsers[player.Name] = nil
 			sendChatMessage(player.DisplayName .. " tried to betray the host, they got unwhitelisted.")
