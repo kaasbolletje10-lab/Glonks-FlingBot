@@ -53,16 +53,9 @@ if not stand then
 	return
 end
 
--- WHITELIST TABLE
 local whitelistedUsers = {}
-
--- OPP LIST
 local oppList = {}
-
--- CURRENT CONTROLLER
 local currentController = host
-
--- FLOATING ANIMATION
 local floatOffset = 0
 local floatSpeed = 2
 
@@ -144,9 +137,7 @@ local function sendChatMessage(text)
 	local textChatService = game:GetService("TextChatService")
 	if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
 		local channel = textChatService.TextChannels.RBXGeneral
-		if channel then
-			channel:SendAsync(text)
-		end
+		if channel then channel:SendAsync(text) end
 	else
 		game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(text, "All")
 	end
@@ -167,9 +158,7 @@ print("Stand:", stand.Name)
 RunService.Stepped:Connect(function()
 	if stand.Character then
 		for _, v in ipairs(stand.Character:GetDescendants()) do
-			if v:IsA("BasePart") then
-				v.CanCollide = false
-			end
+			if v:IsA("BasePart") then v.CanCollide = false end
 		end
 	end
 end)
@@ -190,10 +179,10 @@ local isSpinning = false
 local spinSpeed = 5
 local spinAngle = 0
 local isFlinging = false
+local isFlingingAll = false
 local autoFlingEnabled = false
 local currentFlingTarget = nil
 
--- DEFAULT VALUES
 local DEFAULT = {
 	OFFSET_RIGHT = OFFSET_RIGHT,
 	OFFSET_UP = OFFSET_UP,
@@ -210,7 +199,6 @@ local function sendToSky()
 	end
 end
 
--- PRESS KEY
 local function pressKey(keyCode)
 	VIM:SendKeyEvent(true, keyCode, false, game)
 	task.wait(0.05)
@@ -221,9 +209,7 @@ local function applyPose()
 	if not stand.Character then return end
 	local humanoid = stand.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
-	for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-		track:Stop()
-	end
+	for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do track:Stop() end
 	local animateScript = stand.Character:FindFirstChild("Animate")
 	if animateScript then animateScript.Disabled = true end
 	if stand.Character:FindFirstChild("Torso") then
@@ -404,6 +390,7 @@ end
 local function runFling(target)
 	removePose()
 	currentFlingTarget = target
+	isFlinging = true
 	local elapsed = 0
 	while isFlinging and elapsed < 5 do
 		if not target or not target.Parent or not target.Character then break end
@@ -418,7 +405,7 @@ end
 -- AUTO FLING LOOP
 task.spawn(function()
 	while task.wait(2) do
-		if autoFlingEnabled and not isFlinging then
+		if autoFlingEnabled and not isFlinging and not isFlingingAll then
 			local oppListCopy = {}
 			for playerName, _ in pairs(oppList) do oppListCopy[playerName] = true end
 			for playerName, _ in pairs(oppListCopy) do
@@ -426,7 +413,6 @@ task.spawn(function()
 					local target = Players:FindFirstChild(playerName)
 					if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
 						modeBeforeFling = mode
-						isFlinging = true
 						mode = "idle"
 						isFrozen = false
 						createUI("Auto-Fling: " .. target.DisplayName)
@@ -447,7 +433,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 	local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 	if not standHRP or not controllerHRP then return end
-	if isFlinging then return end
+	if isFlinging or isFlingingAll then return end
 	if isFrozen then
 		standHRP.AssemblyLinearVelocity = Vector3.zero
 		standHRP.AssemblyAngularVelocity = Vector3.zero
@@ -512,22 +498,16 @@ local function handleCommand(player, msg)
 		end
 		lastUsed[skillNum] = now
 		saidCD[skillNum] = false
-		-- Move stand in front of controller before using skill
 		if stand.Character and currentController and currentController.Character then
 			local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 			local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 			if standHRP and controllerHRP then
-				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, -5)
+				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, 3)
 			end
 		end
 		task.wait(0.2)
 		pressKey(keyCode)
 		createUI("Skill " .. skillNum .. " used!")
-		task.wait(1)
-		-- Return to follow position
-		if mode == "follow" or mode == "orbit" or mode == "above" or mode == "behind" then
-			-- heartbeat loop handles repositioning automatically
-		end
 		return
 	end
 
@@ -543,6 +523,7 @@ local function handleCommand(player, msg)
 		mode = "idle"
 		isFrozen = false
 		isFlinging = false
+		isFlingingAll = false
 		isSpinning = false
 		autoFlingEnabled = false
 		currentFlingTarget = nil
@@ -554,6 +535,7 @@ local function handleCommand(player, msg)
 		mode = "idle"
 		isFrozen = false
 		isFlinging = false
+		isFlingingAll = false
 		isSpinning = false
 		currentFlingTarget = nil
 		removePose()
@@ -564,6 +546,7 @@ local function handleCommand(player, msg)
 		mode = "idle"
 		isFrozen = false
 		isFlinging = false
+		isFlingingAll = false
 		currentFlingTarget = nil
 		removePose()
 		createUI("Mode: Idle")
@@ -593,20 +576,47 @@ local function handleCommand(player, msg)
 			end
 		end
 
-	elseif cmd == ".tpwall" then
+	elseif cmd == ".tpwall1" then
 		if not stand.Character or not player.Character then return end
 		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
 		if not standHRP or not playerHRP then return end
-		createUI("Wall move incoming!")
+		createUI("Wall move 1 incoming!")
 		task.spawn(function()
-			-- Step 1: Teleport stand in front of caller
-			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, -5)
+			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
-			-- Step 2: Fire keybind 1 (Flowing Water) using VIM
 			pressKey(Enum.KeyCode.One)
-			task.wait(0.6)
-			-- Step 3: Teleport stand to wall
+			task.wait(0.5)
+			standHRP.CFrame = CFrame.new(WALL_POSITION)
+			createUI("Stand sent to wall!")
+		end)
+
+	elseif cmd == ".tpwall2" then
+		if not stand.Character or not player.Character then return end
+		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
+		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
+		if not standHRP or not playerHRP then return end
+		createUI("Wall move 2 incoming!")
+		task.spawn(function()
+			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
+			task.wait(0.3)
+			pressKey(Enum.KeyCode.Two)
+			task.wait(0.5)
+			standHRP.CFrame = CFrame.new(WALL_POSITION)
+			createUI("Stand sent to wall!")
+		end)
+
+	elseif cmd == ".tpwall3" then
+		if not stand.Character or not player.Character then return end
+		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
+		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
+		if not standHRP or not playerHRP then return end
+		createUI("Wall move 3 incoming!")
+		task.spawn(function()
+			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
+			task.wait(0.3)
+			pressKey(Enum.KeyCode.Three)
+			task.wait(0.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
 		end)
@@ -664,10 +674,11 @@ local function handleCommand(player, msg)
 		createUI("Removed from Opp List:\n" .. target.DisplayName)
 
 	elseif cmd == ".fling" then
-		if isFlinging then isFlinging = false task.wait(0.5) end
 		local query = table.concat(args, " ", 2):lower()
 		if query == "" then createUI("Usage: .fling <name> or .fling all") return end
+
 		if query == "all" then
+			if isFlingingAll then createUI("Fling All: Already running!") return end
 			local flingQueue = {}
 			for _, plr in ipairs(Players:GetPlayers()) do
 				if plr ~= host and plr ~= stand and not whitelistedUsers[plr.Name] then
@@ -678,19 +689,27 @@ local function handleCommand(player, msg)
 			end
 			if #flingQueue == 0 then createUI("Fling All: No valid targets") return end
 			createUI("Flinging " .. #flingQueue .. " players...")
+			isFlingingAll = true
+			modeBeforeFling = mode
+			mode = "idle"
 			task.spawn(function()
 				for _, target in ipairs(flingQueue) do
-					if not isFlinging then break end
-					modeBeforeFling = mode
-					isFlinging = true
-					mode = "idle"
-					isFrozen = false
-					runFling(target)
-					task.wait(6)
+					if not isFlingingAll then break end
+					if target and target.Parent and target.Character then
+						createUI("Flinging: " .. target.DisplayName)
+						runFling(target)
+						task.wait(6)
+					end
 				end
+				isFlingingAll = false
+				mode = modeBeforeFling
+				if mode == "follow" then applyPose() end
+				createUI("Fling All: Done!")
 			end)
 			return
 		end
+
+		if isFlinging then isFlinging = false task.wait(0.5) end
 		local target = findPlayer(query)
 		if not target then createUI("Fling: Player not found\n\"" .. query .. "\"") return end
 		if not target.Character then createUI("Fling: " .. target.DisplayName .. " has no character") return end
@@ -698,7 +717,6 @@ local function handleCommand(player, msg)
 			whitelistedUsers[player.Name] = nil
 			sendChatMessage(player.DisplayName .. " tried to betray the host by flinging them, they got unwhitelisted.")
 			modeBeforeFling = mode
-			isFlinging = true
 			mode = "idle"
 			isFrozen = false
 			createUI("BETRAYAL DETECTED!\nFlinging traitor: " .. player.DisplayName)
@@ -706,18 +724,16 @@ local function handleCommand(player, msg)
 			return
 		end
 		modeBeforeFling = mode
-		isFlinging = true
 		mode = "idle"
 		isFrozen = false
 		createUI("Flinging: " .. target.DisplayName .. "\n5 seconds...")
 		task.spawn(runFling, target)
 
 	elseif cmd == ".stopfling" then
-		if isFlinging then
-			isFlinging = false
-			currentFlingTarget = nil
-			createUI("Fling: Stopped manually")
-		end
+		isFlinging = false
+		isFlingingAll = false
+		currentFlingTarget = nil
+		createUI("Fling: Stopped manually")
 
 	elseif cmd == ".speed" then
 		local num = tonumber(args[2])
@@ -742,7 +758,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall (use garou) .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
@@ -771,6 +787,7 @@ local function handleCommand(player, msg)
 			statusMsg = statusMsg .. "\nFlinging: Active"
 			if currentFlingTarget then statusMsg = statusMsg .. " (" .. currentFlingTarget.DisplayName .. ")" end
 		end
+		if isFlingingAll then statusMsg = statusMsg .. "\nFling All: Active" end
 		if autoFlingEnabled then statusMsg = statusMsg .. "\nAuto-Fling: ON" end
 		local wlCount = 0
 		for _ in pairs(whitelistedUsers) do wlCount += 1 end
@@ -798,6 +815,7 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isSpinning = false
 		isFlinging = false
+		isFlingingAll = false
 		autoFlingEnabled = false
 		currentController = host
 		currentFlingTarget = nil
