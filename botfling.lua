@@ -502,7 +502,7 @@ local function handleCommand(player, msg)
 			local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 			local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 			if standHRP and controllerHRP then
-				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, 7)
+				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, 3)
 			end
 		end
 		task.wait(0.2)
@@ -581,7 +581,7 @@ local function handleCommand(player, msg)
 		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
 		if not standHRP or not playerHRP then return end
-		createUI("Wall move incoming!")
+		createUI("Wall move 1 incoming!")
 		task.spawn(function()
 			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
@@ -616,7 +616,7 @@ local function handleCommand(player, msg)
 			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
 			pressKey(Enum.KeyCode.Three)
-			task.wait(1)
+			task.wait(0.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
 		end)
@@ -758,7 +758,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
 		createUI("Command list sent to chat")
 
 	elseif cmd == ".script" then
