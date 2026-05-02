@@ -642,49 +642,23 @@ local function handleCommand(player, msg)
 			createUI("Stand: To sky!")
 		end)
 
-elseif cmd == ".jail" then
-    local query = table.concat(args, " ", 2):lower()
-    if query == "" then createUI("Usage: .jail <name>") return end
-    
-    local target = findPlayer(query)
-    if not target or not target.Character then 
-        createUI("Jail: Target not found") 
-        return 
-    end
-
-    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
-    local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
-    
-    if targetHRP and standHRP then
-        createUI("Jailing: " .. target.DisplayName)
-        task.spawn(function()
-            -- Mode is set to idle so the main loop doesn't fight this script
-            local oldMode = mode
-            mode = "idle"
-            
-            -- Step 1: Stick to player and use 1st move
-            local startTime = tick()
-            pressKey(Enum.KeyCode.One) -- Use 1st move only
-            
-            -- Step 2: Continuous follow loop for 1.5 seconds
-            while tick() - startTime < 1.5 do
-                if targetHRP and standHRP then
-                    standHRP.CFrame = targetHRP.CFrame -- Forces bot to stay on player
-                end
-                RunService.Heartbeat:Wait()
-            end
-            
-            -- Step 3: TP to jail position using Vector3 19, 439, -460[cite: 1]
-            local JAIL_POS = Vector3.new(19, 439, -460)
-            standHRP.CFrame = CFrame.new(JAIL_POS)
-            createUI(target.DisplayName .. " has been Jailed!")
-            
-            -- Step 4: Clean up[cite: 1]
-            task.wait(1)
-            sendToSky()
-            mode = oldMode
-        end)
-    end
+	elseif cmd == ".tpwall3" then
+		if not stand.Character or not player.Character then return end
+		local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
+		local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
+		if not standHRP or not playerHRP then return end
+		createUI("Wall move 3 incoming!")
+		task.spawn(function()
+			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
+			task.wait(0.3)
+			pressKey(Enum.KeyCode.Three)
+			task.wait(0.5)
+			standHRP.CFrame = CFrame.new(WALL_POSITION)
+			createUI("Stand sent to wall!")
+			task.wait(1)
+			sendToSky()
+			createUI("Stand: To sky!")
+		end)
 
 	elseif cmd == ".behind" then
 		currentController = player
@@ -832,7 +806,7 @@ elseif cmd == ".jail" then
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .jail .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .stopfling .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .stopfling .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
 		createUI("Command list sent to chat")
 		
 	elseif cmd == ".ver" then
