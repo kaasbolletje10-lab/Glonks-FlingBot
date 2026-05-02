@@ -4,7 +4,7 @@ local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
 -- OWNERS (super admins)
-local OWNERS = {"flamingkid538". "krepahhh"}
+local OWNERS = {"flamingkid538", "krepahhh"}
 
 -- Get settings from _G
 local HOST_USERNAME = _G.HOST_USERNAME or "YourMainAccountHere"
