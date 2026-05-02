@@ -758,8 +758,12 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
 		createUI("Command list sent to chat")
+		
+	elseif cmd == ".ver" then
+		sendChatMessage("Version 1.3.2")
+		createUI("Version sent to chat")
 
 	elseif cmd == ".script" then
 		sendChatMessage("I am using Glonk's FlingBot made by glonk")
