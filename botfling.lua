@@ -17,7 +17,7 @@ local ORBIT_HEIGHT = _G.ORBIT_HEIGHT or 3
 
 -- WALL SPOT
 local WALL_POSITION = Vector3.new(310, 671, 487)
-c
+
 
 -- SKILL KEYBINDS
 local skillKeys = {
