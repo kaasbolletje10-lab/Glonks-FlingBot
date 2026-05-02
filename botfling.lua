@@ -13,7 +13,7 @@ local ORBIT_SPEED = _G.ORBIT_SPEED or 2
 local ORBIT_HEIGHT = _G.ORBIT_HEIGHT or 3
 
 -- WALL SPOT
-local WALL_POSITION = Vector3.new(310, 671, 457)
+local WALL_POSITION = Vector3.new(310, 671, 487)
 
 -- SKILL KEYBINDS
 local skillKeys = {
@@ -586,7 +586,7 @@ local function handleCommand(player, msg)
 			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
 			pressKey(Enum.KeyCode.One)
-			task.wait(0.5)
+			task.wait(1.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
 		end)
@@ -601,7 +601,7 @@ local function handleCommand(player, msg)
 			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
 			pressKey(Enum.KeyCode.Two)
-			task.wait(0.5)
+			task.wait(1.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
 		end)
