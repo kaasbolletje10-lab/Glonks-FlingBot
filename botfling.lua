@@ -502,7 +502,7 @@ local function handleCommand(player, msg)
 			local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 			local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 			if standHRP and controllerHRP then
-				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, 3)
+				standHRP.CFrame = controllerHRP.CFrame * CFrame.new(0, 0, 7)
 			end
 		end
 		task.wait(0.2)
