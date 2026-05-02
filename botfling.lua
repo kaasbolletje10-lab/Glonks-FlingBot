@@ -832,7 +832,7 @@ elseif cmd == ".jail" then
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".cmd" then
-		sendChatMessage(".summon .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .stopfling .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
+		sendChatMessage(".summon .jail .stop .orbit [n] .tp .tpwall1 .tpwall2 .tpwall3 .wl [user] .unwl [user] .opp [user] .fling [user/all] .stopfling .spin [n] .1 .2 .3 .4 .status .rj .re .script .ver")
 		createUI("Command list sent to chat")
 		
 	elseif cmd == ".ver" then
