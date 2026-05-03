@@ -13,7 +13,7 @@ local OWNER_DISPLAY = {
 -- LEVEL SYSTEM (1 = basic movement, 2 = movement + fling + tpwall1/2, 3 = everything + autokill)
 local LEVEL_USERS = {
 	[1] = {}, -- add usernames here: "username1", "username2"
-	[2] = {"glonk306", "digitoi181143"}, -- add usernames here
+	[2] = {"glonk306", "digitoi181143", "472012"}, -- add usernames here
 	[3] = {"flamingkid538", "ryderihall3"}, -- add usernames here
 }
 
@@ -796,7 +796,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.6.5")
+		sendChatMessage("Version 1.6.6")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".cmd" then
