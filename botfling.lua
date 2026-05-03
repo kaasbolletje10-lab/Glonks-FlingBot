@@ -8,6 +8,7 @@ local OWNERS = {"flamingkid538", "krepahhh", "472012"}
 local OWNER_DISPLAY = {
 	["flamingkid538"] = "Glonk",
 	["krepahhh"] = "xDa",
+	["472012"] = "flo",
 }
 
 -- LEVEL SYSTEM (1 = basic movement, 2 = movement + fling + tpwall1/2, 3 = everything + autokill)
