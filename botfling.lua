@@ -4,7 +4,7 @@ local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
 -- OWNERS
-local OWNERS = {"flamingkid58", "krepahhh"}
+local OWNERS = {"flamingkid538", "krepahhh"}
 local OWNER_DISPLAY = {
 	["flamingkid538"] = "Glonk",
 	["krepahhh"] = "xDa",
@@ -806,7 +806,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.6.2")
+		sendChatMessage("Version 1.6.3")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".cmd" then
