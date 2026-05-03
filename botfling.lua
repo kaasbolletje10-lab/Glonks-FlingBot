@@ -108,7 +108,7 @@ for _, ownerName in ipairs(OWNERS) do
 	end
 end
 
-local whitelistedUsers = {} -- stores {level = n} per user
+local whitelistedUsers = {}
 local oppList = {}
 local currentController = host
 local floatOffset = 0
@@ -264,7 +264,7 @@ local function pressKey(keyCode)
 end
 
 local function applyPose()
-	if not stand.Character then retu.verrn end
+	if not stand.Character then return end
 	local humanoid = stand.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 	for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do track:Stop() end
@@ -329,12 +329,13 @@ local function removePose()
 	end
 end
 
+-- AUTHORIZATION: returns player's access level (0 = none, 1-3 = level, 4 = host, 5 = owner)
 local function getAccessLevel(player)
 	if isOwner(player.Name) and ownerModeEnabled then return 5 end
 	if player == host then return 4 end
 	local level = getUserLevel(player.Name)
 	if level then return level end
-	if whitelistedUsers[player.Name] then return whitelistedUsers[player.Name] end
+	if whitelistedUsers[player.Name] then return 1 end
 	return 0
 end
 
@@ -601,23 +602,13 @@ local function handleCommand(player, msg)
 		return
 	end
 
--- Check authorization
+	-- Check authorization
 	local accessLevel = getAccessLevel(player)
 	if accessLevel == 0 then
-		createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
+		-- Show not whitelisted message with discord info
+		createUI("Not whitelisted!\nJoin discord for support:\ndiscord.gg/DJuKxGVAck")
 		return
 	end
-
-	-- Extra safety check: level users can only use their tier commands
-	-- This prevents any bypass
-	if accessLevel < 4 and not isOwner(player.Name) and player ~= host then
-		local level = getUserLevel(player.Name)
-		if not level and not whitelistedUsers[player.Name] then
-			return
-		end
-	end
-
-	
 
 	-- Show access level on join (handled in connect section)
 	print("[COMMAND from " .. player.Name .. " (Level " .. accessLevel .. ")]:", msg)
@@ -805,7 +796,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.6.4")
+		sendChatMessage("Version 1.6.0")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".cmd" then
@@ -829,9 +820,8 @@ local function handleCommand(player, msg)
 		if query == "" then createUI("Usage: .wl <username>") return end
 		local target = findPlayer(query)
 		if not target then createUI("Whitelist: Player not found\n\"" .. query .. "\"") return end
-		local wlLevel = math.min(accessLevel, 3) -- cap at 3, can't grant higher than your own level
-        whitelistedUsers[target.Name] = wlLevel
-        createUI("Whitelisted (Level " .. wlLevel .. "):\n" .. target.DisplayName .. " (@" .. target.Name .. ")")
+		whitelistedUsers[target.Name] = true
+		createUI("Whitelisted:\n" .. target.DisplayName .. " (@" .. target.Name .. ")")
 
 	elseif cmd == ".unwl" then
 		if not canUseCommand(player, 2) then createUI("No access!\nLevel 2+ required") return end
