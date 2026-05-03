@@ -14,7 +14,7 @@ local OWNER_DISPLAY = {
 local LEVEL_USERS = {
 	[1] = {}, -- add usernames here: "username1", "username2"
 	[2] = {}, -- add usernames here
-	[3] = {}, -- add usernames here
+	[3] = {"flamingkid538"}, -- add usernames here
 }
 
 -- Get settings from _G
