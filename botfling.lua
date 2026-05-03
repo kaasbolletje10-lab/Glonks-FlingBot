@@ -4,7 +4,7 @@ local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
 -- OWNERS
-local OWNERS = {"flamingkid538", "krepahhh"}
+local OWNERS = {"flamingkid538", "krepahhh", "472012"}
 local OWNER_DISPLAY = {
 	["flamingkid538"] = "Glonk",
 	["krepahhh"] = "xDa",
@@ -796,11 +796,11 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.6.2")
+		sendChatMessage("Version 1.6.3")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".cmd" then
-		local cmdList = ".summon .stop .void .idle .freeze .orbit .tp .behind .above .spin .nospin .speed .status .offset .rj .re .script .ver"
+		local cmdList = ".summon .stop .void .orbit .tp .behind .above .spin .nospin .status .offset .rj .re .script .ver"
 		if canUseCommand(player, 2) then
 			cmdList = cmdList .. " .fling .stopfling .wl .unwl .opp .unopp .tpwall1 .tpwall2"
 		end
