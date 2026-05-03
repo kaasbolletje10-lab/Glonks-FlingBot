@@ -602,13 +602,23 @@ local function handleCommand(player, msg)
 		return
 	end
 
-	-- Check authorization
+-- Check authorization
 	local accessLevel = getAccessLevel(player)
 	if accessLevel == 0 then
-		-- Show not whitelisted message with discord info
-		createUI("Not whitelisted!\nJoin discord for support:\ndiscord.gg/DJuKxGVAck")
+		createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
 		return
 	end
+
+	-- Extra safety check: level users can only use their tier commands
+	-- This prevents any bypass
+	if accessLevel < 4 and not isOwner(player.Name) and player ~= host then
+		local level = getUserLevel(player.Name)
+		if not level and not whitelistedUsers[player.Name] then
+			return
+		end
+	end
+
+	
 
 	-- Show access level on join (handled in connect section)
 	print("[COMMAND from " .. player.Name .. " (Level " .. accessLevel .. ")]:", msg)
