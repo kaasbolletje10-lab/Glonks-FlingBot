@@ -13,7 +13,7 @@ local OWNER_DISPLAY = {
 -- LEVEL SYSTEM (1 = basic movement, 2 = movement + fling + tpwall1/2, 3 = everything + autokill)
 local LEVEL_USERS = {
 	[1] = {}, -- add usernames here: "username1", "username2"
-	[2] = {}, -- add usernames here
+	[2] = {"glonk306", "digitoi181143"}, -- add usernames here
 	[3] = {"flamingkid538", "ryderihall3"}, -- add usernames here
 }
 
