@@ -14,7 +14,7 @@ local OWNER_DISPLAY = {
 local LEVEL_USERS = {
 	[1] = {}, -- add usernames here: "username1", "username2"
 	[2] = {}, -- add usernames here
-	[3] = {"flamingkid538"}, -- add usernames here
+	[3] = {"flamingkid538", "ryderihall3"}, -- add usernames here
 }
 
 -- Get settings from _G
@@ -796,7 +796,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.6.1")
+		sendChatMessage("Version 1.6.2")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".cmd" then
