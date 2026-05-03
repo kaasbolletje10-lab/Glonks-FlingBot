@@ -806,7 +806,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 1.6.0")
+		sendChatMessage("Version 1.6.1")
 		createUI("Version sent to chat")
 
 	elseif cmd == ".cmd" then
