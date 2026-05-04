@@ -12,7 +12,7 @@ local VIM = game:GetService("VirtualInputManager")
 	Owner:   Full access + .owneron .owneroff
 ]]
 local LEVEL_USERS = {
-	[1] = {},
+	[1] = {"flamingkid538"},
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
@@ -20,7 +20,7 @@ local LEVEL_USERS = {
 }
 
 local OWNER_DISPLAY = {
-	["flamingkid538"] = "Glonk",
+	["flamingkid58"] = "Glonk",
 	["krepahhh"] = "xDa",
 }
 
@@ -728,7 +728,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 2.2.1")
+		sendChatMessage("Version 2.2.2")
 		createUI("Version 2.2.0")
 
 	elseif cmd == ".stop" then
