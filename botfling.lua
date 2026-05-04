@@ -728,7 +728,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 2.2.2")
+		sendChatMessage("Version 2.2.3")
 		createUI("Version 2.2.0")
 
 	elseif cmd == ".stop" then
@@ -1108,18 +1108,28 @@ end
 -- Track first chat per player to show welcome message
 local notifiedPlayers = {}
 local function onPlayerChat(player, msg)
+	local level = getAccessLevel(player)
+	local priority = getLevelPriority(level)
+
+	-- Show welcome message on first chat
 	if not notifiedPlayers[player.Name] then
 		notifiedPlayers[player.Name] = true
-		local level = getAccessLevel(player)
-		local priority = getLevelPriority(level)
 		if priority == 0 then
 			createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
+			return -- STOP HERE, don't process command
 		elseif level == "owner" then
 			createUI("Owner " .. getOwnerDisplay(player.Name) .. " connected!")
 		else
 			createUI("Level " .. tostring(level) .. " access detected!\n" .. player.Name)
 		end
 	end
+
+	-- Block unauthorized players every single time
+	if priority == 0 then
+		createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
+		return -- STOP HERE
+	end
+
 	handleCommand(player, msg)
 end
 
