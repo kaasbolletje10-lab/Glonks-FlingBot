@@ -16,7 +16,7 @@ local LEVEL_USERS = {
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
-	["owner"] = {"flamingkid538", "krepahhh"},
+	["owner"] = {"flamingkid58", "krepahhh"},
 }
 
 local OWNER_DISPLAY = {
@@ -728,7 +728,7 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 2.2.0")
+		sendChatMessage("Version 2.2.1")
 		createUI("Version 2.2.0")
 
 	elseif cmd == ".stop" then
