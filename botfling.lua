@@ -12,15 +12,15 @@ local VIM = game:GetService("VirtualInputManager")
 	Owner:   Full access + .owneron .owneroff
 ]]
 local LEVEL_USERS = {
-	[1] = {"flamingkid538"},
+	[1] = {},
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
-	["owner"] = {"flamingkid58", "krepahhh"},
+	["owner"] = {"flamingkid538", "krepahhh"},
 }
 
 local OWNER_DISPLAY = {
-	["flamingkid58"] = "Glonk",
+	["flamingkid538"] = "Glonk",
 	["krepahhh"] = "xDa",
 }
 
