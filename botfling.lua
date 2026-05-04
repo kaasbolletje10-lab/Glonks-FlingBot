@@ -3,29 +3,26 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
--- OWNERS
-local OWNERS = {"flamingkid538", "krepahhh"}
-local OWNER_DISPLAY = {
-	["flamingkid538"] = "Glonk",
-	["krepahhh"] = "xDa",
-}
-
 --[[
 	LEVEL SYSTEM:
-	Level 1: .summon .ver .tp .orbit .spin
-	Level 2: Level 1 + .fling .tpwall1 .tpwall2
-	Level 3: Level 1-2 + .autokill
-	Level 4: Level 1-3 + can control other bots
-	Premium:  All commands but only for controlling OTHER bots, not their own
-	Owner:    Full access, overrides everything
+	Level 1: .summon .ver .tp .orbit .spin (basic movement)
+	Level 2: Level 1 + .fling .tpwall1 .tpwall2 .wl .unwl .opp .unopp
+	Level 3: Level 1-2 + .autokill .stopautokill .1 .2 .3 .4
+	Level 4: Level 1-3 + can control other bots + .reset
+	Owner:   Full access to everything + .owneron .owneroff
 ]]
 local LEVEL_USERS = {
 	[1] = {},
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
-	["premium"] = {},
 	["owner"] = {"flamingkid538", "krepahhh"},
+}
+
+-- Display names for owners
+local OWNER_DISPLAY = {
+	["flamingkid538"] = "Glonk",
+	["krepahhh"] = "xDa",
 }
 
 -- Get settings from _G
@@ -82,8 +79,8 @@ local function getPlayerExact(username)
 end
 
 local function isOwner(username)
-	for _, ownerName in ipairs(OWNERS) do
-		if username == ownerName then return true end
+	for _, name in ipairs(LEVEL_USERS["owner"]) do
+		if name == username then return true end
 	end
 	return false
 end
@@ -92,15 +89,11 @@ local function getOwnerDisplay(username)
 	return OWNER_DISPLAY[username] or username
 end
 
--- Returns "owner", "premium", 4, 3, 2, 1, or nil
+-- Returns "owner", 4, 3, 2, 1, or nil
 local function getUserLevel(username)
 	-- Check owner list first
 	for _, name in ipairs(LEVEL_USERS["owner"]) do
 		if name == username then return "owner" end
-	end
-	-- Check premium
-	for _, name in ipairs(LEVEL_USERS["premium"]) do
-		if name == username then return "premium" end
 	end
 	-- Check numeric levels highest first
 	for level = 4, 1, -1 do
@@ -111,10 +104,9 @@ local function getUserLevel(username)
 	return nil
 end
 
--- Returns numeric priority: owner=99, premium=98, 4=4, 3=3, 2=2, 1=1, none=0
+-- Returns numeric priority: owner=99, 4=4, 3=3, 2=2, 1=1, none=0
 local function getLevelPriority(level)
 	if level == "owner" then return 99 end
-	if level == "premium" then return 98 end
 	if type(level) == "number" then return level end
 	return 0
 end
@@ -128,11 +120,12 @@ if not stand then
 end
 
 local ownersInGame = {}
-for _, ownerName in ipairs(OWNERS) do
+for _, ownerName in ipairs(LEVEL_USERS["owner"]) do
 	local owner = getPlayerExact(ownerName)
 	if owner then table.insert(ownersInGame, owner) end
 end
 
+-- Whitelist system: stores {level = X, whitelister = "username"}
 local whitelistedUsers = {}
 local oppList = {}
 local currentController = host
@@ -348,18 +341,27 @@ local function removePose()
 	end
 end
 
--- Get the access level of a player based on their HOST username (not bot)
--- Returns: "owner", "premium", 4, 3, 2, 1, or 0
+-- Get the access level of a player based on their actual username (not bot account)
+-- Returns: "owner", 4, 3, 2, 1, or 0
 local function getAccessLevel(player)
-	-- Check owner list first (owners override everything)
-	if isOwner(player.Name) and ownerModeEnabled then return "owner" end
-	-- Host always gets full access
+	-- Owners always have access (even when ownerMode is off)
+	if isOwner(player.Name) then return "owner" end
+	
+	-- If ownerMode is off, only owners can use bot
+	if not ownerModeEnabled then return 0 end
+	
+	-- Host always gets level 4
 	if player == host then return 4 end
+	
 	-- Check level system by username
 	local level = getUserLevel(player.Name)
 	if level then return level end
+	
 	-- Check runtime whitelist
-	if whitelistedUsers[player.Name] then return whitelistedUsers[player.Name] end
+	if whitelistedUsers[player.Name] then 
+		return whitelistedUsers[player.Name].level 
+	end
+	
 	return 0
 end
 
@@ -371,8 +373,6 @@ end
 local function canUseLevel(player, minLevel)
 	local level = getAccessLevel(player)
 	if level == "owner" then return true end
-	if level == "premium" then return true end
-	if level == 4 then return true end
 	if type(level) == "number" then return level >= minLevel end
 	return false
 end
@@ -504,8 +504,7 @@ local function runFling(target, duration)
 	endFling()
 end
 
--- IMPROVED AUTO KILL LOOP
--- Instead of teleporting, uses BodyPosition to stay inside target while spamming moves
+-- AUTOKILL LOOP
 task.spawn(function()
 	while task.wait(0.1) do
 		if autoKillEnabled and stand.Character then
@@ -516,7 +515,7 @@ task.spawn(function()
 				if target and target.Character then
 					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 					if targetHRP then
-						-- Keep stand locked inside target using CFrame (fast updates)
+						-- Keep stand locked inside target using CFrame
 						standHRP.CFrame = targetHRP.CFrame
 						standHRP.AssemblyLinearVelocity = Vector3.zero
 						-- Spam moves
@@ -564,7 +563,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local controllerHRP = currentController.Character:FindFirstChild("HumanoidRootPart")
 	if not standHRP or not controllerHRP then return end
 	if isFlinging or isFlingingAll then return end
-	if autoKillEnabled then return end -- autokill loop handles position
+	if autoKillEnabled then return end
 	if isFrozen then
 		standHRP.AssemblyLinearVelocity = Vector3.zero
 		standHRP.AssemblyAngularVelocity = Vector3.zero
@@ -614,15 +613,22 @@ local function handleCommand(player, msg)
 
 	-- Owner toggle commands work even when ownermode is off
 	if cmd == ".owneron" then
-		if not isOwner(player.Name) then return end
+		if not isOwner(player.Name) then 
+			createUI("Permission: Owner only")
+			return 
+		end
 		ownerModeEnabled = true
-		createUI("Owner Mode: ON")
+		createUI("Owner Mode: ON\nHost can use bot")
 		return
 	end
+	
 	if cmd == ".owneroff" then
-		if not isOwner(player.Name) then return end
+		if not isOwner(player.Name) then 
+			createUI("Permission: Owner only")
+			return 
+		end
 		ownerModeEnabled = false
-		createUI("Owner Mode: OFF")
+		createUI("Owner Mode: OFF\nOnly owners can use bot")
 		return
 	end
 
@@ -636,10 +642,15 @@ local function handleCommand(player, msg)
 		return
 	end
 
-	print("[CMD " .. player.Name .. " (" .. tostring(accessLevel) .. ")]:", msg)
+	print("[CMD " .. player.Name .. " (Lvl " .. tostring(accessLevel) .. ")]:", msg)
 
-	-- SKILL COMMANDS (level 1+)
+	-- SKILL COMMANDS (level 3+)
 	if cmd == ".1" or cmd == ".2" or cmd == ".3" or cmd == ".4" then
+		if not canUseLevel(player, 3) then 
+			createUI("No access!\nLevel 3+ required") 
+			return 
+		end
+		
 		local skillNum = string.sub(cmd, 2)
 		local keyCode = skillKeys[skillNum]
 		if not keyCode then return end
@@ -714,8 +725,8 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 2.0.0")
-		createUI("Version 2.0.0")
+		sendChatMessage("Version 2.1.0")
+		createUI("Version 2.1.0")
 
 	elseif cmd == ".stop" then
 		mode = "idle"
@@ -823,7 +834,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".cmd" then
-		local cmdList = ".summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .offset .rj .re .script .ver"
+		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .offset .rj .re .script .ver"
 		if canUseLevel(player, 2) then
 			cmdList = cmdList .. " | LVL2: .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
 		end
@@ -831,7 +842,7 @@ local function handleCommand(player, msg)
 			cmdList = cmdList .. " | LVL3: .autokill .stopautokill .1 .2 .3 .4"
 		end
 		if accessLevel == "owner" or accessLevel == 4 then
-			cmdList = cmdList .. " | HOST+: .reset .owneron .owneroff"
+			cmdList = cmdList .. " | ADMIN: .reset .owneron .owneroff"
 		end
 		sendChatMessage(cmdList)
 		createUI("Commands sent to chat!")
@@ -852,7 +863,8 @@ local function handleCommand(player, msg)
 				while isFlingingAll do
 					local flingQueue = {}
 					for _, plr in ipairs(Players:GetPlayers()) do
-						if plr ~= host and plr ~= stand and not isOwner(plr.Name) then
+						-- Don't fling host, owners, or whitelisted users
+						if plr ~= host and plr ~= stand and not isOwner(plr.Name) and not whitelistedUsers[plr.Name] then
 							if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 								table.insert(flingQueue, plr)
 							end
@@ -885,16 +897,19 @@ local function handleCommand(player, msg)
 		if not target then createUI("Fling: Player not found\n\"" .. query .. "\"") return end
 		if not target.Character then createUI("Fling: " .. target.DisplayName .. " has no character") return end
 
-		-- Owner protection
+		-- Owner protection: Owners can fling anyone, including host
 		if isOwner(target.Name) then
-			local ownerDisplayName = getOwnerDisplay(target.Name)
-			sendChatMessage(player.DisplayName .. " tried to fling " .. ownerDisplayName .. ". Nice try.")
-			modeBeforeFling = mode
-			mode = "idle"
-			isFrozen = false
-			createUI("Protected owner!\nFlinging: " .. player.DisplayName)
-			task.spawn(runFling, player, 5)
-			return
+			-- Non-owners cannot fling owners
+			if accessLevel ~= "owner" then
+				local ownerDisplayName = getOwnerDisplay(target.Name)
+				sendChatMessage(player.DisplayName .. " tried to fling " .. ownerDisplayName .. ". Nice try.")
+				modeBeforeFling = mode
+				mode = "idle"
+				isFrozen = false
+				createUI("Protected owner!\nFlinging: " .. player.DisplayName)
+				task.spawn(runFling, player, 5)
+				return
+			end
 		end
 
 		-- Betrayal: non-owner trying to fling host
@@ -929,6 +944,7 @@ local function handleCommand(player, msg)
 		local target = findPlayer(query)
 		if not target then createUI("Opp: Not found\n\"" .. query .. "\"") return end
 		if isOwner(target.Name) then createUI("Cannot opp an owner!") return end
+		if target == host then createUI("Cannot opp the host!") return end
 		oppList[target.Name] = true
 		autoFlingEnabled = true
 		createUI("Added to Opp List:\n" .. target.DisplayName .. "\nAuto-fling: ON")
@@ -951,10 +967,18 @@ local function handleCommand(player, msg)
 		if query == "" then createUI("Usage: .wl <username>") return end
 		local target = findPlayer(query)
 		if not target then createUI("WL: Not found\n\"" .. query .. "\"") return end
-		-- Grant same level as the person whitelisting, capped at 3
-		local grantLevel = math.min(accessPriority, 3)
-		if type(accessLevel) == "string" then grantLevel = 1 end -- premium grants level 1
-		whitelistedUsers[target.Name] = grantLevel
+		
+		-- Grant same level as the person whitelisting
+		local grantLevel = accessLevel
+		if type(grantLevel) == "string" then 
+			-- Owners grant level 4 (full access except owner commands)
+			grantLevel = 4
+		end
+		
+		whitelistedUsers[target.Name] = {
+			level = grantLevel,
+			whitelister = player.Name
+		}
 		createUI("Whitelisted (Lvl " .. grantLevel .. "):\n" .. target.DisplayName)
 
 	elseif cmd == ".unwl" then
@@ -1022,7 +1046,7 @@ local function handleCommand(player, msg)
 		local target = findPlayer(query)
 		if not target then createUI("AutoKill: Not found\n\"" .. query .. "\"") return end
 		if isOwner(target.Name) then createUI("Cannot autokill an owner!") return end
-		if target == host then createUI("Cannot autokill the host!") return end
+		if target == host and accessLevel ~= "owner" then createUI("Cannot autokill the host!") return end
 		autoKillTargets[target.Name] = true
 		autoKillEnabled = true
 		mode = "idle"
@@ -1081,8 +1105,6 @@ local function onPlayerChat(player, msg)
 			createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
 		elseif level == "owner" then
 			createUI("Owner " .. getOwnerDisplay(player.Name) .. " connected!")
-		elseif level == "premium" then
-			createUI("Premium user connected!\n" .. player.Name)
 		else
 			createUI("Level " .. tostring(level) .. " access detected!\n" .. player.Name)
 		end
@@ -1091,9 +1113,11 @@ local function onPlayerChat(player, msg)
 end
 
 -- Connect host
-host.Chatted:Connect(function(msg)
-	onPlayerChat(host, msg)
-end)
+if host then
+	host.Chatted:Connect(function(msg)
+		onPlayerChat(host, msg)
+	end)
+end
 
 -- Connect owners already in game
 for _, owner in ipairs(ownersInGame) do
@@ -1114,7 +1138,7 @@ end)
 
 -- Connect existing players
 for _, player in ipairs(Players:GetPlayers()) do
-	if player ~= host then
+	if player ~= host and player ~= stand then
 		player.Chatted:Connect(function(msg)
 			onPlayerChat(player, msg)
 		end)
