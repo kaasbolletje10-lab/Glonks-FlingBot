@@ -3,19 +3,24 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
+local VERSION = "2.5.0"
+
 --[[
 	LEVEL SYSTEM:
-	Level 1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .ver .script .rj .re .cmd .offset
-	Level 2: Level 1 + .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl
-	Level 3: Level 1-2 + .autokill .stopautokill .1 .2 .3 .4
-	Level 4: Level 1-3 + .reset
-	Owner:   Full access + .owneron .owneroff
+	Level 1:   .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .ver .script .rj .re .cmd .offset
+	Level 2:   Level 1 + .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl
+	Level 3:   Level 1-2 + .autokill .stopautokill .1 .2 .3 .4
+	Level 4:   Level 1-3 + .reset
+	Premium:   All commands on OTHER bots, cannot run their own bot
+	Owner:     Full access + .owneron .owneroff
 ]]
+
 local LEVEL_USERS = {
 	[1] = {},
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
+	["premium"] = {},
 	["owner"] = {"flamingkid538", "krepahhh"},
 }
 
@@ -64,6 +69,8 @@ getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
 local ownerModeEnabled = true
+
+-- whitelistedUsers[username] = number (1-4) — plain number, nothing else
 local whitelistedUsers = {}
 
 local function getPlayerExact(username)
@@ -80,13 +87,25 @@ local function isOwner(username)
 	return false
 end
 
+local function isPremium(username)
+	for _, name in ipairs(LEVEL_USERS["premium"]) do
+		if name == username then return true end
+	end
+	return false
+end
+
 local function getOwnerDisplay(username)
 	return OWNER_DISPLAY[username] or username
 end
 
+-- Looks up username in LEVEL_USERS table only (not whitelist)
+-- Returns: "owner", "premium", 4, 3, 2, 1, or nil
 local function getUserLevelFromTable(username)
 	for _, name in ipairs(LEVEL_USERS["owner"]) do
 		if name == username then return "owner" end
+	end
+	for _, name in ipairs(LEVEL_USERS["premium"]) do
+		if name == username then return "premium" end
 	end
 	for level = 4, 1, -1 do
 		for _, name in ipairs(LEVEL_USERS[level]) do
@@ -96,8 +115,10 @@ local function getUserLevelFromTable(username)
 	return nil
 end
 
+-- Returns numeric priority for comparison
 local function getLevelPriority(level)
 	if level == "owner" then return 99 end
+	if level == "premium" then return 98 end
 	if type(level) == "number" then return level end
 	return 0
 end
@@ -205,10 +226,12 @@ local function sendChatMessage(text)
 end
 
 if host then
-	local statusText = "Stand Linked\nHost: " .. host.Name
-	if #ownersInGame > 0 then statusText = statusText .. "\nOwners in game!" end
-	createUI(statusText)
+	createUI("Glonk's FlingBot - v" .. VERSION .. "\nHost: " .. host.Name)
 	createWatermark()
+	-- Say boot message in chat
+	task.delay(2, function()
+		sendChatMessage("Glonk's FlingBot - v" .. VERSION)
+	end)
 else
 	createUI("No Host Found")
 	return
@@ -335,32 +358,46 @@ local function removePose()
 	end
 end
 
--- FIXED ACCESS LEVEL FUNCTION
+--[[
+	THE SINGLE SOURCE OF TRUTH FOR ACCESS LEVELS
+	Returns: "owner", "premium", 4, 3, 2, 1, or 0
+	Priority: owner > premium > 4 > 3 > 2 > 1 > 0
+	
+	Checks in this exact order:
+	1. Owner list (always works, even if ownerMode off)
+	2. ownerMode gate (if off, everyone else gets 0)
+	3. Host = level 4
+	4. LEVEL_USERS table lookup
+	5. Runtime whitelist (plain number stored by .wl command)
+	6. Default = 0 (no access)
+]]
 local function getAccessLevel(player)
-	-- Owners always have access (even when ownerMode is off)
+	-- 1. Owner check — always works
 	if isOwner(player.Name) then return "owner" end
-	
-	-- If ownerMode is off, nobody else can use the bot
+
+	-- 2. If ownerMode off, block everyone else
 	if not ownerModeEnabled then return 0 end
-	
-	-- Host gets level 4
+
+	-- 3. Host = level 4
 	if player == host then return 4 end
-	
-	-- Check LEVEL_USERS table
+
+	-- 4. Check LEVEL_USERS table
 	local tableLevel = getUserLevelFromTable(player.Name)
-	if tableLevel then return tableLevel end
-	
-	-- Check runtime whitelist
+	if tableLevel ~= nil then return tableLevel end
+
+	-- 5. Check runtime whitelist — stored as plain number
 	local wlLevel = whitelistedUsers[player.Name]
-	if wlLevel then return wlLevel end
-	
-	-- No access
+	if type(wlLevel) == "number" then return wlLevel end
+
+	-- 6. No access
 	return 0
 end
 
+-- Returns true if player has access >= minLevel
 local function canUseLevel(player, minLevel)
 	local level = getAccessLevel(player)
 	if level == "owner" then return true end
+	if level == "premium" then return true end
 	if type(level) == "number" then return level >= minLevel end
 	return false
 end
@@ -492,7 +529,7 @@ local function runFling(target, duration)
 	endFling()
 end
 
--- IMPROVED AUTOKILL with left click punches
+-- AUTOKILL move spammer
 task.spawn(function()
 	while task.wait(0.1) do
 		if autoKillEnabled then
@@ -501,28 +538,20 @@ task.spawn(function()
 				if target and target.Character then
 					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 					if targetHRP then
-						-- Spam all 4 skills
 						pressKey(Enum.KeyCode.One)
 						task.wait(0.05)
 						clickMouse()
 						task.wait(0.05)
-						
 						pressKey(Enum.KeyCode.Two)
 						task.wait(0.05)
 						clickMouse()
 						task.wait(0.05)
-						
 						pressKey(Enum.KeyCode.Three)
 						task.wait(0.05)
 						clickMouse()
 						task.wait(0.05)
-						
 						pressKey(Enum.KeyCode.Four)
 						task.wait(0.05)
-						clickMouse()
-						task.wait(0.05)
-						
-						-- Extra punches
 						clickMouse()
 						task.wait(0.05)
 						clickMouse()
@@ -533,6 +562,7 @@ task.spawn(function()
 	end
 end)
 
+-- AUTO FLING LOOP
 task.spawn(function()
 	while task.wait(2) do
 		if autoFlingEnabled and not isFlinging and not isFlingingAll then
@@ -556,30 +586,26 @@ task.spawn(function()
 	end
 end)
 
+-- MAIN HEARTBEAT LOOP
 RunService.Heartbeat:Connect(function(dt)
 	if not stand.Character then return end
 	local standHRP = stand.Character:FindFirstChild("HumanoidRootPart")
 	if not standHRP then return end
-
 	if isFlinging or isFlingingAll then return end
 
-	-- AUTOKILL with better prediction
+	-- AUTOKILL: stay on target with velocity prediction
 	if autoKillEnabled then
-		standHRP.AssemblyLinearVelocity = Vector3.zero
-		standHRP.AssemblyAngularVelocity = Vector3.zero
 		for targetName, _ in pairs(autoKillTargets) do
 			local target = Players:FindFirstChild(targetName)
 			if target and target.Character then
 				local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 				if targetHRP then
-					-- Predict position ahead
-					local targetVelocity = targetHRP.AssemblyLinearVelocity
-					local predictedPos = targetHRP.Position + (targetVelocity * 0.2)
-					local predictedCFrame = CFrame.new(predictedPos)
-					
-					-- Snap directly to target (no lerp for instant response)
-					standHRP.CFrame = predictedCFrame
+					local vel = targetHRP.AssemblyLinearVelocity
+					local predicted = targetHRP.CFrame
+						* CFrame.new(vel.X * 0.16, vel.Y * 0.16, vel.Z * 0.16)
+					standHRP.CFrame = standHRP.CFrame:Lerp(predicted, 0.8)
 					standHRP.AssemblyLinearVelocity = Vector3.zero
+					standHRP.AssemblyAngularVelocity = Vector3.zero
 				end
 			end
 		end
@@ -634,32 +660,26 @@ RunService.Heartbeat:Connect(function(dt)
 	standHRP.AssemblyAngularVelocity = Vector3.zero
 end)
 
+-- COMMAND HANDLER
 local function handleCommand(player, msg)
 	local args = string.split(msg, " ")
 	local cmd = args[1]
 
-	-- Owner commands (bypass ownerMode check)
+	-- Owner-only toggle commands always work regardless of ownerMode
 	if cmd == ".owneron" then
-		if not isOwner(player.Name) then 
-			createUI("Permission: Owner only")
-			return 
-		end
+		if not isOwner(player.Name) then createUI("Permission: Owner only") return end
 		ownerModeEnabled = true
 		createUI("Owner Mode: ON\nHost can use bot")
 		return
 	end
-	
 	if cmd == ".owneroff" then
-		if not isOwner(player.Name) then 
-			createUI("Permission: Owner only")
-			return 
-		end
+		if not isOwner(player.Name) then createUI("Permission: Owner only") return end
 		ownerModeEnabled = false
 		createUI("Owner Mode: OFF\nOnly owners can use bot")
 		return
 	end
 
-	-- Get access level and block unauthorized users
+	-- THE GATE: check access and block if 0
 	local accessLevel = getAccessLevel(player)
 	local accessPriority = getLevelPriority(accessLevel)
 
@@ -670,12 +690,9 @@ local function handleCommand(player, msg)
 
 	print("[CMD " .. player.Name .. " (Lvl:" .. tostring(accessLevel) .. ")]:", msg)
 
-	-- LEVEL 3+ COMMANDS
+	-- LEVEL 3+ SKILL COMMANDS
 	if cmd == ".1" or cmd == ".2" or cmd == ".3" or cmd == ".4" then
-		if not canUseLevel(player, 3) then 
-			createUI("No access!\nLevel 3+ required") 
-			return 
-		end
+		if not canUseLevel(player, 3) then createUI("No access!\nLevel 3+ required") return end
 		local skillNum = string.sub(cmd, 2)
 		local keyCode = skillKeys[skillNum]
 		if not keyCode then return end
@@ -754,8 +771,8 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 2.4.0 - Fixed Whitelist & Autokill")
-		createUI("Version 2.4.0")
+		sendChatMessage("Glonk's FlingBot - v" .. VERSION)
+		createUI("v" .. VERSION)
 
 	elseif cmd == ".stop" then
 		mode = "idle"
@@ -872,11 +889,11 @@ local function handleCommand(player, msg)
 		end
 
 	elseif cmd == ".script" then
-		sendChatMessage("I am using Glonk's FlingBot made by glonk")
+		sendChatMessage("I am using Glonk's FlingBot v" .. VERSION)
 		createUI("Script message sent!")
 
 	elseif cmd == ".cmd" then
-		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .rj .re .script .ver .offset"
+		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .offset .rj .re .script .ver"
 		if canUseLevel(player, 2) then
 			cmdList = cmdList .. " | LVL2: .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
 		end
@@ -891,10 +908,7 @@ local function handleCommand(player, msg)
 
 	-- LEVEL 2+ COMMANDS
 	elseif cmd == ".fling" then
-		if not canUseLevel(player, 2) then 
-			createUI("No access!\nLevel 2+ required") 
-			return 
-		end
+		if not canUseLevel(player, 2) then createUI("No access!\nLevel 2+ required") return end
 		local query = table.concat(args, " ", 2):lower()
 		if query == "" then createUI("Usage: .fling <name> or .fling all") return end
 
@@ -942,6 +956,7 @@ local function handleCommand(player, msg)
 		if not target then createUI("Fling: Player not found\n\"" .. query .. "\"") return end
 		if not target.Character then createUI("Fling: " .. target.DisplayName .. " has no character") return end
 
+		-- Owner protection
 		if isOwner(target.Name) and accessLevel ~= "owner" then
 			local ownerDisplayName = getOwnerDisplay(target.Name)
 			sendChatMessage(player.DisplayName .. " tried to fling " .. ownerDisplayName .. ". Nice try.")
@@ -953,6 +968,7 @@ local function handleCommand(player, msg)
 			return
 		end
 
+		-- Betrayal protection
 		if accessLevel ~= "owner" and target == host then
 			whitelistedUsers[player.Name] = nil
 			sendChatMessage(player.DisplayName .. " tried to betray the host, they got unwhitelisted.")
@@ -1004,20 +1020,37 @@ local function handleCommand(player, msg)
 	elseif cmd == ".wl" then
 		if not canUseLevel(player, 2) then createUI("No access!\nLevel 2+ required") return end
 		local query = table.concat(args, " ", 2)
-		if query == "" then createUI("Usage: .wl <username>") return end
-		local target = findPlayer(query)
-		if not target then createUI("WL: Not found\n\"" .. query .. "\"") return end
-		
-		-- FIXED: Grant same level as whitelister
-		local grantLevel
+		if query == "" then createUI("Usage: .wl <username> [level]") return end
+
+		-- Optional level argument: .wl username 2
+		local parts = string.split(query, " ")
+		local targetQuery = parts[1]
+		local requestedLevel = tonumber(parts[2])
+
+		local target = findPlayer(targetQuery)
+		if not target then createUI("WL: Not found\n\"" .. targetQuery .. "\"") return end
+
+		-- Determine grant level
+		local maxGrantable
 		if accessLevel == "owner" then
-			grantLevel = 4  -- Owners grant level 4
+			maxGrantable = 4
+		elseif accessLevel == "premium" then
+			maxGrantable = 3
 		elseif type(accessLevel) == "number" then
-			grantLevel = accessLevel  -- Grant same level as whitelister
+			maxGrantable = accessLevel
 		else
-			grantLevel = 2  -- Fallback to level 2
+			maxGrantable = 1
 		end
-		
+
+		-- If they specified a level, use it but cap at their own max
+		local grantLevel
+		if requestedLevel then
+			grantLevel = math.clamp(requestedLevel, 1, maxGrantable)
+		else
+			grantLevel = maxGrantable
+		end
+
+		-- Store as plain number in whitelist
 		whitelistedUsers[target.Name] = grantLevel
 		createUI("Whitelisted (Lvl " .. grantLevel .. "):\n" .. target.DisplayName .. "\n(@" .. target.Name .. ")")
 
@@ -1091,7 +1124,6 @@ local function handleCommand(player, msg)
 		autoKillEnabled = true
 		mode = "idle"
 		isFrozen = false
-		currentController = player
 		createUI("AutoKill: ON\nTarget: " .. target.DisplayName)
 
 	elseif cmd == ".stopautokill" then
@@ -1136,43 +1168,51 @@ local function handleCommand(player, msg)
 	end
 end
 
+-- PLAYER CHAT HANDLER
 local notifiedPlayers = {}
 local function onPlayerChat(player, msg)
+	-- Always block unauthorized players, every message
 	local level = getAccessLevel(player)
 	local priority = getLevelPriority(level)
 
+	-- Show welcome on first message
 	if not notifiedPlayers[player.Name] then
 		notifiedPlayers[player.Name] = true
 		if priority == 0 then
 			createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
-			return
+			return -- hard stop, no command processing
 		elseif level == "owner" then
 			createUI("Owner " .. getOwnerDisplay(player.Name) .. " connected!")
+		elseif level == "premium" then
+			createUI("Premium access!\n" .. player.Name)
 		else
-			createUI("Level " .. tostring(level) .. " access detected!\n" .. player.Name)
+			createUI("Level " .. tostring(level) .. " access!\n" .. player.Name)
 		end
 	end
 
+	-- Hard block on every subsequent message too
 	if priority == 0 then
-		createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
 		return
 	end
 
 	handleCommand(player, msg)
 end
 
+-- Connect host
 if host then
 	host.Chatted:Connect(function(msg)
 		onPlayerChat(host, msg)
 	end)
 end
 
+-- Connect owners already in game
 for _, owner in ipairs(ownersInGame) do
 	owner.Chatted:Connect(function(msg)
 		onPlayerChat(owner, msg)
 	end)
 end
 
+-- Connect new players joining
 Players.PlayerAdded:Connect(function(player)
 	player.Chatted:Connect(function(msg)
 		onPlayerChat(player, msg)
@@ -1182,6 +1222,7 @@ Players.PlayerAdded:Connect(function(player)
 	end
 end)
 
+-- Connect existing players
 for _, player in ipairs(Players:GetPlayers()) do
 	if player ~= host and player ~= stand then
 		player.Chatted:Connect(function(msg)
