@@ -17,24 +17,25 @@ local function clickMouse()
     local targetX = width * 0.85 
     local targetY = height * 0.50
 
-    -- RED DOT HELPER: Shows you where the script is clicking
+  -- RED DOT HELPER: Forces it to the very front
     local player = game.Players.LocalPlayer
-    local testDot = Instance.new("Frame")
-    testDot.Name = "ClickVisualizer"
-    testDot.Size = UDim2.new(0, 30, 0, 30)
-    testDot.Position = UDim2.new(0, targetX - 15, 0, targetY - 15)
-    testDot.BackgroundColor3 = Color3.new(1, 0, 0)
-    testDot.BorderSizePixel = 2
-    testDot.ZIndex = 999
-    testDot.Parent = player:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
-    game:GetService("Debris"):AddItem(testDot, 0.2) 
+    local sgui = player:WaitForChild("PlayerGui"):FindFirstChild("TouchVisualizer") or Instance.new("ScreenGui", player.PlayerGui)
+    sgui.Name = "TouchVisualizer"
+    sgui.DisplayOrder = 99999 -- This keeps it above everything
 
-    -- Mobile Touch Execution
-    local touchId = 99 
-    VIM:SendTouchEvent(touchId, 0, targetX, targetY) -- Down
-    task.wait(0.1) 
-    VIM:SendTouchEvent(touchId, 2, targetX, targetY) -- Up
-end
+    local testDot = Instance.new("Frame")
+    testDot.Size = UDim2.new(0, 40, 0, 40) -- Made it bigger (40px)
+    testDot.Position = UDim2.new(0, targetX - 20, 0, targetY - 20)
+    testDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Bright Red
+    testDot.ZIndex = 10000
+    testDot.Parent = sgui
+    game:GetService("Debris"):AddItem(testDot, 5) -- Stays for 0.5s so you can see it
+
+-- Perform the Mobile Touch
+    local touchId = os.time() -- Gives each touch a unique ID
+    VIM:SendTouchEvent(touchId, 0, targetX, targetY) -- Finger Down on screen
+    task.wait(0.15)                                  -- Holds the "touch" for a split second
+    VIM:SendTouchEvent(touchId, 2, targetX, targetY) -- Finger Up (Releases the button)
 
 --[[
 	LEVEL SYSTEM:
