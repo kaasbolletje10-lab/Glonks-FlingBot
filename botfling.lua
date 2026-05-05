@@ -3,14 +3,16 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.5.1"
+local VERSION = "2.5.2"
+
+local TARGET_X = 55
+local TARGET_Y = 124
 
 local function clickMouse()
-    -- Syntax: SendMouseButtonEvent(x, y, mouseButton, isDown, game, clickCount)
-    -- mouseButton 0 is Left Click
-    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0) 
-    task.wait(0.01) -- Tiny delay so the engine registers the "hold"
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    -- State 0 is TouchStart, State 2 is TouchEnd
+    VIM:SendTouchEvent(0, 0, TARGET_X, TARGET_Y)
+    task.wait(0.05)
+    VIM:SendTouchEvent(0, 2, TARGET_X, TARGET_Y)
 end
 
 --[[
@@ -547,21 +549,21 @@ task.spawn(function()
 					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 					if targetHRP then
 						pressKey(Enum.KeyCode.One)
-						task.wait(0.05)
+						task.wait(0.1)
 						clickMouse()
-						task.wait(0.05)
+						task.wait(0.1)
 						pressKey(Enum.KeyCode.Two)
-						task.wait(0.05)
+						task.wait(0.1)
 						clickMouse()
-						task.wait(0.05)
+						task.wait(0.1)
 						pressKey(Enum.KeyCode.Three)
-						task.wait(0.05)
+						task.wait(0.1)
 						clickMouse()
-						task.wait(0.05)
+						task.wait(0.1)
 						pressKey(Enum.KeyCode.Four)
-						task.wait(0.05)
+						task.wait(0.1)
 						clickMouse()
-						task.wait(0.05)
+						task.wait(0.1)
 						clickMouse()
 					end
 				end
