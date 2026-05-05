@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.5.2"
+local VERSION = "2.5.3"
 
 local TARGET_X = 55
 local TARGET_Y = 124
@@ -549,21 +549,21 @@ task.spawn(function()
 					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 					if targetHRP then
 						pressKey(Enum.KeyCode.One)
-						task.wait(0.1)
+						task.wait(1.5)
 						clickMouse()
-						task.wait(0.1)
+						task.wait(1.5)
 						pressKey(Enum.KeyCode.Two)
-						task.wait(0.1)
+						task.wait(1.5)
 						clickMouse()
-						task.wait(0.1)
+						task.wait(1.5)
 						pressKey(Enum.KeyCode.Three)
-						task.wait(0.1)
+						task.wait(1.5)
 						clickMouse()
-						task.wait(0.1)
+						task.wait(1.5)
 						pressKey(Enum.KeyCode.Four)
-						task.wait(0.1)
+						task.wait(1.5)
 						clickMouse()
-						task.wait(0.1)
+						task.wait(1.5)
 						clickMouse()
 					end
 				end
