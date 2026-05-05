@@ -13,29 +13,28 @@ local function clickMouse()
     local width = camera.ViewportSize.X
     local height = camera.ViewportSize.Y
 
-    -- Middle-Right calculation (85% Width, 50% Height)
+    -- Middle-Right calculation[cite: 1]
     local targetX = width * 0.85 
     local targetY = height * 0.50
 
-  -- RED DOT HELPER: Forces it to the very front
+    -- RED DOT: Parenting to a new ScreenGui to ensure it shows up
     local player = game.Players.LocalPlayer
-    local sgui = player:WaitForChild("PlayerGui"):FindFirstChild("TouchVisualizer") or Instance.new("ScreenGui", player.PlayerGui)
-    sgui.Name = "TouchVisualizer"
-    sgui.DisplayOrder = 99999 -- This keeps it above everything
+    local sg = player.PlayerGui:FindFirstChild("TestGui") or Instance.new("ScreenGui", player.PlayerGui)
+    sg.Name = "TestGui"
+    
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 50, 0, 50) -- Made it big so you can't miss it
+    dot.Position = UDim2.new(0, targetX - 25, 0, targetY - 25)
+    dot.BackgroundColor3 = Color3.new(1, 0, 0)
+    dot.Parent = sg
+    game:GetService("Debris"):AddItem(dot, 0.5)
 
-    local testDot = Instance.new("Frame")
-    testDot.Size = UDim2.new(0, 40, 0, 40) -- Made it bigger (40px)
-    testDot.Position = UDim2.new(0, targetX - 20, 0, targetY - 20)
-    testDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Bright Red
-    testDot.ZIndex = 10000
-    testDot.Parent = sgui
-    game:GetService("Debris"):AddItem(testDot, 5) -- Stays for 0.5s so you can see it
-
--- Perform the Mobile Touch
-    local touchId = os.time() -- Gives each touch a unique ID
-    VIM:SendTouchEvent(touchId, 0, targetX, targetY) -- Finger Down on screen
-    task.wait(0.15)                                  -- Holds the "touch" for a split second
-    VIM:SendTouchEvent(touchId, 2, targetX, targetY) -- Finger Up (Releases the button)
+    -- The "VIM" Touch execution[cite: 1]
+    local touchId = os.time()
+    VIM:SendTouchEvent(touchId, 0, targetX, targetY) -- Finger Down[cite: 1]
+    task.wait(0.1) 
+    VIM:SendTouchEvent(touchId, 2, targetX, targetY) -- Finger Up[cite: 1]
+end
 
 --[[
 	LEVEL SYSTEM:
