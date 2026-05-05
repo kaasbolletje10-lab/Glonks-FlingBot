@@ -5,7 +5,7 @@ local VIM = game:GetService("VirtualInputManager")
 
 --[[
 	LEVEL SYSTEM:
-	Level 1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .ver .script .rj .re .cmd
+	Level 1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .ver .script .rj .re .cmd .offset
 	Level 2: Level 1 + .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl
 	Level 3: Level 1-2 + .autokill .stopautokill .1 .2 .3 .4
 	Level 4: Level 1-3 + .reset
@@ -16,11 +16,11 @@ local LEVEL_USERS = {
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
-	["owner"] = {"flamingki538", "krepahhh"},
+	["owner"] = {"flamingkid38", "krepahhh"},
 }
 
 local OWNER_DISPLAY = {
-	["flamingki538"] = "Glonk",
+	["flamingkid38"] = "Glonk",
 	["krepahhh"] = "xDa",
 }
 
@@ -263,6 +263,12 @@ local function pressKey(keyCode)
 	VIM:SendKeyEvent(false, keyCode, false, game)
 end
 
+local function clickMouse()
+	VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+	task.wait(0.05)
+	VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
 local function applyPose()
 	if not stand.Character then return end
 	local humanoid = stand.Character:FindFirstChildOfClass("Humanoid")
@@ -329,14 +335,26 @@ local function removePose()
 	end
 end
 
+-- FIXED ACCESS LEVEL FUNCTION
 local function getAccessLevel(player)
+	-- Owners always have access (even when ownerMode is off)
 	if isOwner(player.Name) then return "owner" end
+	
+	-- If ownerMode is off, nobody else can use the bot
 	if not ownerModeEnabled then return 0 end
+	
+	-- Host gets level 4
 	if player == host then return 4 end
+	
+	-- Check LEVEL_USERS table
 	local tableLevel = getUserLevelFromTable(player.Name)
 	if tableLevel then return tableLevel end
+	
+	-- Check runtime whitelist
 	local wlLevel = whitelistedUsers[player.Name]
 	if wlLevel then return wlLevel end
+	
+	-- No access
 	return 0
 end
 
@@ -474,20 +492,40 @@ local function runFling(target, duration)
 	endFling()
 end
 
--- AUTOKILL with prediction
+-- IMPROVED AUTOKILL with left click punches
 task.spawn(function()
-	while task.wait(0.5) do
+	while task.wait(0.1) do
 		if autoKillEnabled then
 			for targetName, _ in pairs(autoKillTargets) do
 				local target = Players:FindFirstChild(targetName)
 				if target and target.Character then
 					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 					if targetHRP then
+						-- Spam all 4 skills
 						pressKey(Enum.KeyCode.One)
+						task.wait(0.05)
+						clickMouse()
+						task.wait(0.05)
+						
 						pressKey(Enum.KeyCode.Two)
+						task.wait(0.05)
+						clickMouse()
+						task.wait(0.05)
+						
 						pressKey(Enum.KeyCode.Three)
+						task.wait(0.05)
+						clickMouse()
+						task.wait(0.05)
+						
 						pressKey(Enum.KeyCode.Four)
-						pressKey(Enum.KeyCode.Z)
+						task.wait(0.05)
+						clickMouse()
+						task.wait(0.05)
+						
+						-- Extra punches
+						clickMouse()
+						task.wait(0.05)
+						clickMouse()
 					end
 				end
 			end
@@ -525,7 +563,7 @@ RunService.Heartbeat:Connect(function(dt)
 
 	if isFlinging or isFlingingAll then return end
 
-	-- AUTOKILL with 0.16 second prediction
+	-- AUTOKILL with better prediction
 	if autoKillEnabled then
 		standHRP.AssemblyLinearVelocity = Vector3.zero
 		standHRP.AssemblyAngularVelocity = Vector3.zero
@@ -534,12 +572,13 @@ RunService.Heartbeat:Connect(function(dt)
 			if target and target.Character then
 				local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 				if targetHRP then
-					-- Predict position 0.16 seconds ahead
+					-- Predict position ahead
 					local targetVelocity = targetHRP.AssemblyLinearVelocity
-					local predictedPos = targetHRP.Position + (targetVelocity * 0.16)
+					local predictedPos = targetHRP.Position + (targetVelocity * 0.2)
 					local predictedCFrame = CFrame.new(predictedPos)
 					
-					standHRP.CFrame = standHRP.CFrame:Lerp(predictedCFrame, 0.8)
+					-- Snap directly to target (no lerp for instant response)
+					standHRP.CFrame = predictedCFrame
 					standHRP.AssemblyLinearVelocity = Vector3.zero
 				end
 			end
@@ -599,19 +638,28 @@ local function handleCommand(player, msg)
 	local args = string.split(msg, " ")
 	local cmd = args[1]
 
+	-- Owner commands (bypass ownerMode check)
 	if cmd == ".owneron" then
-		if not isOwner(player.Name) then return end
+		if not isOwner(player.Name) then 
+			createUI("Permission: Owner only")
+			return 
+		end
 		ownerModeEnabled = true
 		createUI("Owner Mode: ON\nHost can use bot")
 		return
 	end
+	
 	if cmd == ".owneroff" then
-		if not isOwner(player.Name) then return end
+		if not isOwner(player.Name) then 
+			createUI("Permission: Owner only")
+			return 
+		end
 		ownerModeEnabled = false
 		createUI("Owner Mode: OFF\nOnly owners can use bot")
 		return
 	end
 
+	-- Get access level and block unauthorized users
 	local accessLevel = getAccessLevel(player)
 	local accessPriority = getLevelPriority(accessLevel)
 
@@ -622,8 +670,12 @@ local function handleCommand(player, msg)
 
 	print("[CMD " .. player.Name .. " (Lvl:" .. tostring(accessLevel) .. ")]:", msg)
 
+	-- LEVEL 3+ COMMANDS
 	if cmd == ".1" or cmd == ".2" or cmd == ".3" or cmd == ".4" then
-		if not canUseLevel(player, 3) then createUI("No access!\nLevel 3+ required") return end
+		if not canUseLevel(player, 3) then 
+			createUI("No access!\nLevel 3+ required") 
+			return 
+		end
 		local skillNum = string.sub(cmd, 2)
 		local keyCode = skillKeys[skillNum]
 		if not keyCode then return end
@@ -653,6 +705,7 @@ local function handleCommand(player, msg)
 		return
 	end
 
+	-- LEVEL 1+ COMMANDS
 	if cmd == ".summon" then
 		currentController = player
 		mode = "follow"
@@ -701,8 +754,8 @@ local function handleCommand(player, msg)
 		createUI("Stand: Spin Stopped")
 
 	elseif cmd == ".ver" then
-		sendChatMessage("Version 2.3.0 - Fixed Access & Autokill")
-		createUI("Version 2.3.0")
+		sendChatMessage("Version 2.4.0 - Fixed Whitelist & Autokill")
+		createUI("Version 2.4.0")
 
 	elseif cmd == ".stop" then
 		mode = "idle"
@@ -823,7 +876,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".cmd" then
-		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .rj .re .script .ver"
+		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .rj .re .script .ver .offset"
 		if canUseLevel(player, 2) then
 			cmdList = cmdList .. " | LVL2: .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
 		end
@@ -836,8 +889,12 @@ local function handleCommand(player, msg)
 		sendChatMessage(cmdList)
 		createUI("Commands sent to chat!")
 
+	-- LEVEL 2+ COMMANDS
 	elseif cmd == ".fling" then
-		if not canUseLevel(player, 2) then createUI("No access!\nLevel 2+ required") return end
+		if not canUseLevel(player, 2) then 
+			createUI("No access!\nLevel 2+ required") 
+			return 
+		end
 		local query = table.concat(args, " ", 2):lower()
 		if query == "" then createUI("Usage: .fling <name> or .fling all") return end
 
@@ -950,12 +1007,17 @@ local function handleCommand(player, msg)
 		if query == "" then createUI("Usage: .wl <username>") return end
 		local target = findPlayer(query)
 		if not target then createUI("WL: Not found\n\"" .. query .. "\"") return end
+		
+		-- FIXED: Grant same level as whitelister
 		local grantLevel
 		if accessLevel == "owner" then
-			grantLevel = 4
+			grantLevel = 4  -- Owners grant level 4
+		elseif type(accessLevel) == "number" then
+			grantLevel = accessLevel  -- Grant same level as whitelister
 		else
-			grantLevel = accessLevel
+			grantLevel = 2  -- Fallback to level 2
 		end
+		
 		whitelistedUsers[target.Name] = grantLevel
 		createUI("Whitelisted (Lvl " .. grantLevel .. "):\n" .. target.DisplayName .. "\n(@" .. target.Name .. ")")
 
@@ -1016,6 +1078,7 @@ local function handleCommand(player, msg)
 			createUI("Stand: To sky!")
 		end)
 
+	-- LEVEL 3+ COMMANDS
 	elseif cmd == ".autokill" then
 		if not canUseLevel(player, 3) then createUI("No access!\nLevel 3+ required") return end
 		local query = table.concat(args, " ", 2)
@@ -1049,6 +1112,7 @@ local function handleCommand(player, msg)
 			createUI("AutoKill: Stopped")
 		end
 
+	-- LEVEL 4 / OWNER ONLY
 	elseif cmd == ".reset" then
 		if accessLevel ~= "owner" and accessLevel ~= 4 then createUI("No access!\nLevel 4/Owner only") return end
 		OFFSET_RIGHT = DEFAULT.OFFSET_RIGHT
