@@ -3,7 +3,15 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.5.0"
+local VERSION = "2.5.1"
+
+local function clickMouse()
+    -- Syntax: SendMouseButtonEvent(x, y, mouseButton, isDown, game, clickCount)
+    -- mouseButton 0 is Left Click
+    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0) 
+    task.wait(0.01) -- Tiny delay so the engine registers the "hold"
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
 
 --[[
 	LEVEL SYSTEM:
