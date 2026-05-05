@@ -3,16 +3,37 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.5.3"
+local VERSION = "2.5.4"
 
 local TARGET_X = 55
 local TARGET_Y = 124
 
 local function clickMouse()
-    -- State 0 is TouchStart, State 2 is TouchEnd
-    VIM:SendTouchEvent(0, 0, TARGET_X, TARGET_Y)
-    task.wait(0.05)
-    VIM:SendTouchEvent(0, 2, TARGET_X, TARGET_Y)
+    local camera = workspace.CurrentCamera
+    local width = camera.ViewportSize.X
+    local height = camera.ViewportSize.Y
+
+    -- Middle-Right calculation (85% Width, 50% Height)
+    local targetX = width * 0.85 
+    local targetY = height * 0.50
+
+    -- RED DOT HELPER: Shows you where the script is clicking
+    local player = game.Players.LocalPlayer
+    local testDot = Instance.new("Frame")
+    testDot.Name = "ClickVisualizer"
+    testDot.Size = UDim2.new(0, 30, 0, 30)
+    testDot.Position = UDim2.new(0, targetX - 15, 0, targetY - 15)
+    testDot.BackgroundColor3 = Color3.new(1, 0, 0)
+    testDot.BorderSizePixel = 2
+    testDot.ZIndex = 999
+    testDot.Parent = player:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
+    game:GetService("Debris"):AddItem(testDot, 0.2) 
+
+    -- Mobile Touch Execution
+    local touchId = 99 
+    VIM:SendTouchEvent(touchId, 0, targetX, targetY) -- Down
+    task.wait(0.1) 
+    VIM:SendTouchEvent(touchId, 2, targetX, targetY) -- Up
 end
 
 --[[
@@ -541,35 +562,37 @@ end
 
 -- AUTOKILL move spammer
 task.spawn(function()
-	while task.wait(0.1) do
-		if autoKillEnabled then
-			for targetName, _ in pairs(autoKillTargets) do
-				local target = Players:FindFirstChild(targetName)
-				if target and target.Character then
-					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
-					if targetHRP then
-						pressKey(Enum.KeyCode.One)
-						task.wait(1.5)
-						clickMouse()
-						task.wait(1.5)
-						pressKey(Enum.KeyCode.Two)
-						task.wait(1.5)
-						clickMouse()
-						task.wait(1.5)
-						pressKey(Enum.KeyCode.Three)
-						task.wait(1.5)
-						clickMouse()
-						task.wait(1.5)
-						pressKey(Enum.KeyCode.Four)
-						task.wait(1.5)
-						clickMouse()
-						task.wait(1.5)
-						clickMouse()
-					end
-				end
-			end
-		end
-	end
+    while task.wait(0.1) do
+        if autoKillEnabled then
+            for targetName, _ in pairs(autoKillTargets) do
+                local target = Players:FindFirstChild(targetName)
+                if target and target.Character then
+                    -- Skill 1
+                    pressKey(Enum.KeyCode.One)
+                    task.wait(0.5)
+                    clickMouse()
+                    
+                    -- Skill 2
+                    task.wait(0.5)
+                    pressKey(Enum.KeyCode.Two)
+                    task.wait(0.5)
+                    clickMouse()
+                    
+                    -- Skill 3
+                    task.wait(0.5)
+                    pressKey(Enum.KeyCode.Three)
+                    task.wait(0.5)
+                    clickMouse()
+                    
+                    -- Skill 4
+                    task.wait(0.5)
+                    pressKey(Enum.KeyCode.Four)
+                    task.wait(0.5)
+                    clickMouse()
+                end
+            end
+        end
+    end
 end)
 
 -- AUTO FLING LOOP
