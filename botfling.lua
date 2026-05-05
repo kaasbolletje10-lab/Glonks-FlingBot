@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.5.6"
+local VERSION = "2.5.7"
 
 local TARGET_X = 55
 local TARGET_Y = 124
@@ -972,7 +972,7 @@ local function handleCommand(player, msg)
 						if target and target.Parent and target.Character then
 							createUI("Flinging: " .. target.DisplayName)
 							runFling(target, 3)
-							task.wait(4)
+							task.wait(0.5)
 						end
 					end
 					task.wait(1)
