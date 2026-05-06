@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.6.3"
+local VERSION = "2.6.4"
 
 --[[
 	LEVEL SYSTEM:
@@ -934,15 +934,15 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".cmd" then
-		local cmdList = "LVL1: .summon .tp .orbit .spin .storm  .stop .void .behind .above .status .rj .re .script .ver"
+		local cmdList = "LVL1: .summon .tp .orbit .storm .void .status .rj .re .script .ver"
 		if canUseLevel(player, 2) then
-			cmdList = cmdList .. " | LVL2: .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
+			cmdList = cmdList .. " | LVL2: .fling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
 		end
 		if canUseLevel(player, 3) then
 			cmdList = cmdList .. " | LVL3: .autokill .stopautokill .1 .2 .3 .4"
 		end
 		if accessLevel == "owner" or accessLevel == 4 then
-			cmdList = cmdList .. " | ADMIN: .reset .owneron .owneroff"
+			cmdList = cmdList .. " | ADM: .reset .owneron"
 		end
 		sendChatMessage(cmdList)
 		createUI("Commands sent to chat!")
