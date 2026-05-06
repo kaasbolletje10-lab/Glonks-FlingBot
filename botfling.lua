@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.6.1"
+local VERSION = "2.6.0"
 
 --[[
 	LEVEL SYSTEM:
@@ -16,7 +16,7 @@ local VERSION = "2.6.1"
 ]]
 
 local LEVEL_USERS = {
-	[1] = {},
+	[1] = {"flamingkid538"},
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
