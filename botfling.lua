@@ -3,46 +3,15 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.5.7"
-
-local TARGET_X = 55
-local TARGET_Y = 124
-
-local function clickMouse()
-    local camera = workspace.CurrentCamera
-    local width = camera.ViewportSize.X
-    local height = camera.ViewportSize.Y
-
-    -- Middle-Right calculation[cite: 1]
-    local targetX = width * 0.85 
-    local targetY = height * 0.50
-
-    -- RED DOT: Parenting to a new ScreenGui to ensure it shows up
-    local player = game.Players.LocalPlayer
-    local sg = player.PlayerGui:FindFirstChild("TestGui") or Instance.new("ScreenGui", player.PlayerGui)
-    sg.Name = "TestGui"
-    
-    local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, 50, 0, 50) -- Made it big so you can't miss it
-    dot.Position = UDim2.new(0, targetX - 25, 0, targetY - 25)
-    dot.BackgroundColor3 = Color3.new(1, 0, 0)
-    dot.Parent = sg
-    game:GetService("Debris"):AddItem(dot, 0.5)
-
-    -- The "VIM" Touch execution[cite: 1]
-    local touchId = os.time()
-    VIM:SendTouchEvent(touchId, 0, targetX, targetY) -- Finger Down[cite: 1]
-    task.wait(0.1) 
-    VIM:SendTouchEvent(touchId, 2, targetX, targetY) -- Finger Up[cite: 1]
-end
+local VERSION = "2.6.0"
 
 --[[
 	LEVEL SYSTEM:
-	Level 1:   .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .ver .script .rj .re .cmd .offset
+	Level 1:   .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .ver .script .rj .re .cmd .offset .storm
 	Level 2:   Level 1 + .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl
 	Level 3:   Level 1-2 + .autokill .stopautokill .1 .2 .3 .4
 	Level 4:   Level 1-3 + .reset
-	Premium:   All commands on OTHER bots, cannot run their own bot
+	Premium:   Level 1-3 commands on OTHER bots only
 	Owner:     Full access + .owneron .owneroff
 ]]
 
@@ -58,6 +27,7 @@ local LEVEL_USERS = {
 local OWNER_DISPLAY = {
 	["flamingkid538"] = "Glonk",
 	["krepahhh"] = "xDa",
+	["nick1_gus"] = "Nick",
 }
 
 local HOST_USERNAME = _G.HOST_USERNAME or "YourMainAccountHere"
@@ -95,14 +65,13 @@ local lastUsed = {}
 local saidCD = {}
 local autoKillTargets = {}
 local autoKillEnabled = false
+local stormEnabled = false
 
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
 local ownerModeEnabled = true
-
--- whitelistedUsers[username] = number (1-4) — plain number, nothing else
-local whitelistedUsers = {}
+local whitelistedUsers = {} -- stores plain numbers only: whitelistedUsers["name"] = 2
 
 local function getPlayerExact(username)
 	for _, plr in ipairs(Players:GetPlayers()) do
@@ -129,8 +98,6 @@ local function getOwnerDisplay(username)
 	return OWNER_DISPLAY[username] or username
 end
 
--- Looks up username in LEVEL_USERS table only (not whitelist)
--- Returns: "owner", "premium", 4, 3, 2, 1, or nil
 local function getUserLevelFromTable(username)
 	for _, name in ipairs(LEVEL_USERS["owner"]) do
 		if name == username then return "owner" end
@@ -146,10 +113,9 @@ local function getUserLevelFromTable(username)
 	return nil
 end
 
--- Returns numeric priority for comparison
 local function getLevelPriority(level)
 	if level == "owner" then return 99 end
-	if level == "premium" then return 98 end
+	if level == "premium" then return 50 end
 	if type(level) == "number" then return level end
 	return 0
 end
@@ -259,7 +225,6 @@ end
 if host then
 	createUI("Glonk's FlingBot - v" .. VERSION .. "\nHost: " .. host.Name)
 	createWatermark()
-	-- Say boot message in chat
 	task.delay(2, function()
 		sendChatMessage("Glonk's FlingBot - v" .. VERSION)
 	end)
@@ -296,6 +261,8 @@ local isFlinging = false
 local isFlingingAll = false
 local autoFlingEnabled = false
 local currentFlingTarget = nil
+local stormController = nil
+local stormAngle = 0
 
 local DEFAULT = {
 	OFFSET_RIGHT = OFFSET_RIGHT,
@@ -317,7 +284,7 @@ local function pressKey(keyCode)
 	VIM:SendKeyEvent(false, keyCode, false, game)
 end
 
-local function clickMouse()
+local function doClick()
 	VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
 	task.wait(0.05)
 	VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
@@ -390,45 +357,39 @@ local function removePose()
 end
 
 --[[
-	THE SINGLE SOURCE OF TRUTH FOR ACCESS LEVELS
+	ACCESS LEVEL FUNCTION - Single source of truth
 	Returns: "owner", "premium", 4, 3, 2, 1, or 0
-	Priority: owner > premium > 4 > 3 > 2 > 1 > 0
 	
-	Checks in this exact order:
-	1. Owner list (always works, even if ownerMode off)
-	2. ownerMode gate (if off, everyone else gets 0)
-	3. Host = level 4
-	4. LEVEL_USERS table lookup
-	5. Runtime whitelist (plain number stored by .wl command)
-	6. Default = 0 (no access)
+	Order:
+	1. Owner list → always works
+	2. ownerMode gate → if off, everyone else = 0
+	3. Host = 4
+	4. LEVEL_USERS table
+	5. Runtime whitelist (plain number)
+	6. Default = 0
 ]]
 local function getAccessLevel(player)
-	-- 1. Owner check — always works
 	if isOwner(player.Name) then return "owner" end
-
-	-- 2. If ownerMode off, block everyone else
 	if not ownerModeEnabled then return 0 end
-
-	-- 3. Host = level 4
 	if player == host then return 4 end
-
-	-- 4. Check LEVEL_USERS table
 	local tableLevel = getUserLevelFromTable(player.Name)
 	if tableLevel ~= nil then return tableLevel end
-
-	-- 5. Check runtime whitelist — stored as plain number
 	local wlLevel = whitelistedUsers[player.Name]
 	if type(wlLevel) == "number" then return wlLevel end
-
-	-- 6. No access
 	return 0
 end
 
--- Returns true if player has access >= minLevel
+--[[
+	canUseLevel - checks if player meets minimum numeric level requirement
+	NOTE: premium gets access to levels 1-3 only, NOT 4
+	owner gets everything
+]]
 local function canUseLevel(player, minLevel)
 	local level = getAccessLevel(player)
 	if level == "owner" then return true end
-	if level == "premium" then return true end
+	if level == "premium" then
+		return minLevel <= 3 -- premium can use up to level 3 commands
+	end
 	if type(level) == "number" then return level >= minLevel end
 	return false
 end
@@ -560,39 +521,38 @@ local function runFling(target, duration)
 	endFling()
 end
 
--- AUTOKILL move spammer
+-- AUTOKILL LOOP: spam moves and punch on target
 task.spawn(function()
-    while task.wait(0.1) do
-        if autoKillEnabled then
-            for targetName, _ in pairs(autoKillTargets) do
-                local target = Players:FindFirstChild(targetName)
-                if target and target.Character then
-                    -- Skill 1
-                    pressKey(Enum.KeyCode.One)
-                    task.wait(0.5)
-                    clickMouse()
-                    
-                    -- Skill 2
-                    task.wait(0.5)
-                    pressKey(Enum.KeyCode.Two)
-                    task.wait(0.5)
-                    clickMouse()
-                    
-                    -- Skill 3
-                    task.wait(0.5)
-                    pressKey(Enum.KeyCode.Three)
-                    task.wait(0.5)
-                    clickMouse()
-                    
-                    -- Skill 4
-                    task.wait(0.5)
-                    pressKey(Enum.KeyCode.Four)
-                    task.wait(0.5)
-                    clickMouse()
-                end
-            end
-        end
-    end
+	while task.wait(0.3) do
+		if autoKillEnabled then
+			for targetName, _ in pairs(autoKillTargets) do
+				local target = Players:FindFirstChild(targetName)
+				if target and target.Character then
+					local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+					if targetHRP then
+						-- Punch first (left click)
+						doClick()
+						task.wait(0.1)
+						doClick()
+						task.wait(0.1)
+						-- Use skills
+						pressKey(Enum.KeyCode.One)
+						task.wait(0.15)
+						pressKey(Enum.KeyCode.Two)
+						task.wait(0.15)
+						pressKey(Enum.KeyCode.Three)
+						task.wait(0.15)
+						pressKey(Enum.KeyCode.Four)
+						task.wait(0.15)
+						-- Extra punches
+						doClick()
+						task.wait(0.1)
+						doClick()
+					end
+				end
+			end
+		end
+	end
 end)
 
 -- AUTO FLING LOOP
@@ -634,13 +594,33 @@ RunService.Heartbeat:Connect(function(dt)
 				local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
 				if targetHRP then
 					local vel = targetHRP.AssemblyLinearVelocity
-					local predicted = targetHRP.CFrame
-						* CFrame.new(vel.X * 0.16, vel.Y * 0.16, vel.Z * 0.16)
+					local predicted = targetHRP.CFrame * CFrame.new(vel.X * 0.16, vel.Y * 0.16, vel.Z * 0.16)
 					standHRP.CFrame = standHRP.CFrame:Lerp(predicted, 0.8)
 					standHRP.AssemblyLinearVelocity = Vector3.zero
 					standHRP.AssemblyAngularVelocity = Vector3.zero
 				end
 			end
+		end
+		return
+	end
+
+	-- STORM MODE: fly around controller in fast chaotic pattern
+	if stormEnabled and stormController and stormController.Character then
+		local controllerHRP = stormController.Character:FindFirstChild("HumanoidRootPart")
+		if controllerHRP then
+			stormAngle += 15 * dt * 60 -- very fast rotation
+			local radius = 10
+			local heightVariation = math.sin(stormAngle * 0.3) * 5
+			local x = math.cos(stormAngle) * radius
+			local z = math.sin(stormAngle) * radius
+			-- Also vary radius slightly for chaos
+			local chaosRadius = radius + math.sin(stormAngle * 2.7) * 3
+			local cx = math.cos(stormAngle) * chaosRadius
+			local cz = math.sin(stormAngle * 1.3) * chaosRadius
+			local targetPos = controllerHRP.Position + Vector3.new(cx, 3 + heightVariation, cz)
+			standHRP.CFrame = CFrame.new(targetPos)
+			standHRP.AssemblyLinearVelocity = Vector3.zero
+			standHRP.AssemblyAngularVelocity = Vector3.zero
 		end
 		return
 	end
@@ -698,7 +678,7 @@ local function handleCommand(player, msg)
 	local args = string.split(msg, " ")
 	local cmd = args[1]
 
-	-- Owner-only toggle commands always work regardless of ownerMode
+	-- Owner-only toggle commands — bypass ownerMode
 	if cmd == ".owneron" then
 		if not isOwner(player.Name) then createUI("Permission: Owner only") return end
 		ownerModeEnabled = true
@@ -712,7 +692,7 @@ local function handleCommand(player, msg)
 		return
 	end
 
-	-- THE GATE: check access and block if 0
+	-- THE GATE — get access level, block if 0
 	local accessLevel = getAccessLevel(player)
 	local accessPriority = getLevelPriority(accessLevel)
 
@@ -761,10 +741,27 @@ local function handleCommand(player, msg)
 		mode = "follow"
 		isFrozen = false
 		isFlinging = false
+		stormEnabled = false
 		autoKillEnabled = false
 		autoKillTargets = {}
 		applyPose()
 		createUI("Mode: Follow\nController: " .. player.Name)
+
+	elseif cmd == ".storm" then
+		stormEnabled = true
+		stormController = player
+		mode = "idle"
+		isFrozen = false
+		isFlinging = false
+		autoKillEnabled = false
+		autoKillTargets = {}
+		stormAngle = 0
+		createUI("Storm Mode: ON\nAround: " .. player.Name)
+
+	elseif cmd == ".nostorm" then
+		stormEnabled = false
+		stormController = nil
+		createUI("Storm Mode: OFF")
 
 	elseif cmd == ".tp" then
 		if stand.Character and player.Character then
@@ -782,6 +779,7 @@ local function handleCommand(player, msg)
 		mode = "orbit"
 		isFrozen = false
 		isFlinging = false
+		stormEnabled = false
 		autoKillEnabled = false
 		autoKillTargets = {}
 		applyPose()
@@ -813,6 +811,8 @@ local function handleCommand(player, msg)
 		isFlinging = false
 		isFlingingAll = false
 		isSpinning = false
+		stormEnabled = false
+		stormController = nil
 		autoFlingEnabled = false
 		autoKillEnabled = false
 		autoKillTargets = {}
@@ -827,6 +827,8 @@ local function handleCommand(player, msg)
 		isFlinging = false
 		isFlingingAll = false
 		isSpinning = false
+		stormEnabled = false
+		stormController = nil
 		autoKillEnabled = false
 		autoKillTargets = {}
 		currentFlingTarget = nil
@@ -839,6 +841,8 @@ local function handleCommand(player, msg)
 		isFrozen = false
 		isFlinging = false
 		isFlingingAll = false
+		stormEnabled = false
+		stormController = nil
 		autoKillEnabled = false
 		autoKillTargets = {}
 		currentFlingTarget = nil
@@ -847,6 +851,7 @@ local function handleCommand(player, msg)
 
 	elseif cmd == ".freeze" then
 		mode = "idle"
+		stormEnabled = false
 		isFrozen = true
 		createUI("Stand: Frozen")
 
@@ -855,6 +860,7 @@ local function handleCommand(player, msg)
 		mode = "behind"
 		isFrozen = false
 		isFlinging = false
+		stormEnabled = false
 		autoKillEnabled = false
 		autoKillTargets = {}
 		applyPose()
@@ -865,6 +871,7 @@ local function handleCommand(player, msg)
 		mode = "above"
 		isFrozen = false
 		isFlinging = false
+		stormEnabled = false
 		autoKillEnabled = false
 		autoKillTargets = {}
 		applyPose()
@@ -882,6 +889,7 @@ local function handleCommand(player, msg)
 		if currentController then statusMsg = statusMsg .. "\nController: " .. currentController.Name end
 		if isFrozen then statusMsg = statusMsg .. "\nFrozen: Yes" end
 		if isSpinning then statusMsg = statusMsg .. "\nSpinning: " .. spinSpeed end
+		if stormEnabled then statusMsg = statusMsg .. "\nStorm: ON" end
 		if isFlinging then
 			statusMsg = statusMsg .. "\nFlinging: Active"
 			if currentFlingTarget then statusMsg = statusMsg .. " (" .. currentFlingTarget.DisplayName .. ")" end
@@ -926,7 +934,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".cmd" then
-		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .stop .void .idle .freeze .behind .above .speed .status .offset .rj .re .script .ver"
+		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .storm .nostorm .stop .void .idle .freeze .behind .above .speed .status .offset .rj .re .script .ver"
 		if canUseLevel(player, 2) then
 			cmdList = cmdList .. " | LVL2: .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
 		end
@@ -989,7 +997,6 @@ local function handleCommand(player, msg)
 		if not target then createUI("Fling: Player not found\n\"" .. query .. "\"") return end
 		if not target.Character then createUI("Fling: " .. target.DisplayName .. " has no character") return end
 
-		-- Owner protection
 		if isOwner(target.Name) and accessLevel ~= "owner" then
 			local ownerDisplayName = getOwnerDisplay(target.Name)
 			sendChatMessage(player.DisplayName .. " tried to fling " .. ownerDisplayName .. ". Nice try.")
@@ -1001,7 +1008,6 @@ local function handleCommand(player, msg)
 			return
 		end
 
-		-- Betrayal protection
 		if accessLevel ~= "owner" and target == host then
 			whitelistedUsers[player.Name] = nil
 			sendChatMessage(player.DisplayName .. " tried to betray the host, they got unwhitelisted.")
@@ -1054,16 +1060,11 @@ local function handleCommand(player, msg)
 		if not canUseLevel(player, 2) then createUI("No access!\nLevel 2+ required") return end
 		local query = table.concat(args, " ", 2)
 		if query == "" then createUI("Usage: .wl <username> [level]") return end
-
-		-- Optional level argument: .wl username 2
 		local parts = string.split(query, " ")
 		local targetQuery = parts[1]
 		local requestedLevel = tonumber(parts[2])
-
 		local target = findPlayer(targetQuery)
 		if not target then createUI("WL: Not found\n\"" .. targetQuery .. "\"") return end
-
-		-- Determine grant level
 		local maxGrantable
 		if accessLevel == "owner" then
 			maxGrantable = 4
@@ -1074,16 +1075,12 @@ local function handleCommand(player, msg)
 		else
 			maxGrantable = 1
 		end
-
-		-- If they specified a level, use it but cap at their own max
 		local grantLevel
 		if requestedLevel then
 			grantLevel = math.clamp(requestedLevel, 1, maxGrantable)
 		else
 			grantLevel = maxGrantable
 		end
-
-		-- Store as plain number in whitelist
 		whitelistedUsers[target.Name] = grantLevel
 		createUI("Whitelisted (Lvl " .. grantLevel .. "):\n" .. target.DisplayName .. "\n(@" .. target.Name .. ")")
 
@@ -1107,6 +1104,7 @@ local function handleCommand(player, msg)
 			local prevMode = mode
 			mode = "idle"
 			isFrozen = true
+			stormEnabled = false
 			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
 			pressKey(Enum.KeyCode.One)
@@ -1131,6 +1129,7 @@ local function handleCommand(player, msg)
 			local prevMode = mode
 			mode = "idle"
 			isFrozen = true
+			stormEnabled = false
 			standHRP.CFrame = playerHRP.CFrame * CFrame.new(0, 0, 3)
 			task.wait(0.3)
 			pressKey(Enum.KeyCode.Two)
@@ -1155,6 +1154,7 @@ local function handleCommand(player, msg)
 		if target == host and accessLevel ~= "owner" then createUI("Cannot autokill the host!") return end
 		autoKillTargets[target.Name] = true
 		autoKillEnabled = true
+		stormEnabled = false
 		mode = "idle"
 		isFrozen = false
 		createUI("AutoKill: ON\nTarget: " .. target.DisplayName)
@@ -1189,6 +1189,8 @@ local function handleCommand(player, msg)
 		isSpinning = false
 		isFlinging = false
 		isFlingingAll = false
+		stormEnabled = false
+		stormController = nil
 		autoFlingEnabled = false
 		autoKillEnabled = false
 		autoKillTargets = {}
@@ -1204,7 +1206,6 @@ end
 -- PLAYER CHAT HANDLER
 local notifiedPlayers = {}
 local function onPlayerChat(player, msg)
-	-- Always block unauthorized players, every message
 	local level = getAccessLevel(player)
 	local priority = getLevelPriority(level)
 
@@ -1213,7 +1214,7 @@ local function onPlayerChat(player, msg)
 		notifiedPlayers[player.Name] = true
 		if priority == 0 then
 			createUI("Not whitelisted!\nJoin discord:\ndiscord.gg/DJuKxGVAck")
-			return -- hard stop, no command processing
+			return
 		elseif level == "owner" then
 			createUI("Owner " .. getOwnerDisplay(player.Name) .. " connected!")
 		elseif level == "premium" then
@@ -1223,29 +1224,24 @@ local function onPlayerChat(player, msg)
 		end
 	end
 
-	-- Hard block on every subsequent message too
-	if priority == 0 then
-		return
-	end
+	-- Hard block unauthorized every message
+	if priority == 0 then return end
 
 	handleCommand(player, msg)
 end
 
--- Connect host
 if host then
 	host.Chatted:Connect(function(msg)
 		onPlayerChat(host, msg)
 	end)
 end
 
--- Connect owners already in game
 for _, owner in ipairs(ownersInGame) do
 	owner.Chatted:Connect(function(msg)
 		onPlayerChat(owner, msg)
 	end)
 end
 
--- Connect new players joining
 Players.PlayerAdded:Connect(function(player)
 	player.Chatted:Connect(function(msg)
 		onPlayerChat(player, msg)
@@ -1255,7 +1251,6 @@ Players.PlayerAdded:Connect(function(player)
 	end
 end)
 
--- Connect existing players
 for _, player in ipairs(Players:GetPlayers()) do
 	if player ~= host and player ~= stand then
 		player.Chatted:Connect(function(msg)
