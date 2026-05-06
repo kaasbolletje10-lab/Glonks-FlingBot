@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.6.1"
+local VERSION = "2.6.2"
 
 --[[
 	LEVEL SYSTEM:
@@ -934,7 +934,7 @@ local function handleCommand(player, msg)
 		createUI("Script message sent!")
 
 	elseif cmd == ".cmd" then
-		local cmdList = "LVL1: .summon .tp .orbit .spin .nospin .storm .nostorm .stop .void .idle .freeze .behind .above .speed .status .offset .rj .re .script .ver"
+		local cmdList = "LVL1: .summon .tp .orbit .spin .storm .nostorm .stop .void .idle .behind .above  .status .rj .re .script .ver"
 		if canUseLevel(player, 2) then
 			cmdList = cmdList .. " | LVL2: .fling .stopfling .opp .unopp .tpwall1 .tpwall2 .wl .unwl"
 		end
