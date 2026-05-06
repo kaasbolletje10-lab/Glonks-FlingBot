@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.6.0"
+local VERSION = "2.6.1"
 
 --[[
 	LEVEL SYSTEM:
