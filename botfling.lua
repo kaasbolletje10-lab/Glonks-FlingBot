@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 
-local VERSION = "2.6.0"
+local VERSION = "2.6.1"
 
 --[[
 	LEVEL SYSTEM:
@@ -21,11 +21,11 @@ local LEVEL_USERS = {
 	[3] = {},
 	[4] = {},
 	["premium"] = {},
-	["owner"] = {"flamingkid538", "krepahhh", "nick1_gus"},
+	["owner"] = {"flamingkid38", "krepahhh", "nick1_gus"},
 }
 
 local OWNER_DISPLAY = {
-	["flamingkid538"] = "Glonk",
+	["flamingkid38"] = "Glonk",
 	["krepahhh"] = "xDa",
 	["nick1_gus"] = "Nick",
 }
