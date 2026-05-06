@@ -4,16 +4,7 @@ local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
 
-local VERSION = "3.0.0"
-
--- PANDA DEVELOPMENT KEY SYSTEM
-local KeySystemURL = "local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
-local VIM = game:GetService("VirtualInputManager")
-local HttpService = game:GetService("HttpService")
-
-local VERSION = "3.0.0"
+local VERSION = "3.0.1"
 
 -- PANDA DEVELOPMENT KEY SYSTEM
 local KeySystemURL = "https://pandadevelopment.net/getkey?service=glonkflingbot&hwid="
@@ -39,7 +30,7 @@ local HOST_USERNAME = _G.HOST_USERNAME or "YourMainAccountHere"
 local OFFSET_RIGHT = _G.OFFSET_RIGHT or 2
 local OFFSET_UP = _G.OFFSET_UP or 3
 local OFFSET_BACK = _G.OFFSET_BACK or 4
-local FOLLOW_SPEED = _G.FOLLOW_SPEED or 0.3
+local FOLLOWcl_SPEED = _G.FOLLOW_SPEED or 0.3
 local ORBIT_SPEED = _G.ORBIT_SPEED or 2
 local ORBIT_HEIGHT = _G.ORBIT_HEIGHT or 3
 
@@ -1295,7 +1286,7 @@ for _, player in ipairs(Players:GetPlayers()) do
 		end)
 	end
 end"
-local KeyCheckURL = "https://pandadevelopment.net/checkkey?service=yourservicename&key="
+local KeyCheckURL = "https://pandadevelopment.net/checkkey?service=glonkflingbot&key="
 
 --[[
 	ACCESS SYSTEM:
