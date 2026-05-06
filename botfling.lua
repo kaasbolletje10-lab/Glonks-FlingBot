@@ -16,16 +16,16 @@ local VERSION = "2.6.0"
 ]]
 
 local LEVEL_USERS = {
-	[1] = {"flamingkid538"},
+	[1] = {},
 	[2] = {"glonk306", "digitoi181143", "472012"},
 	[3] = {},
 	[4] = {},
 	["premium"] = {},
-	["owner"] = {"flamingkid38", "krepahhh", "nick1_gus"},
+	["owner"] = {"flamingkid538", "krepahhh", "nick1_gus"},
 }
 
 local OWNER_DISPLAY = {
-	["flamingkid38"] = "Glonk",
+	["flamingkid538"] = "Glonk",
 	["krepahhh"] = "xDa",
 	["nick1_gus"] = "Nick",
 }
