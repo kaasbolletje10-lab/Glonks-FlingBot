@@ -6,7 +6,7 @@ local HttpService = game:GetService("HttpService")
 
 local VERSION = "3.1.0"
 
-local PANDA_PROJECT_KEY = "YOUR_PANDA_PROJECT_KEY_HERE"
+local PANDA_PROJECT_KEY = "glonkflingbot"
 local KEY_GET_URL = "https://pandadevelopment.net/getkey?service=pandadevelopment&projectkey=" .. PANDA_PROJECT_KEY
 local KEY_CHECK_URL = "https://pandadevelopment.net/checkkey?service=pandadevelopment&projectkey=" .. PANDA_PROJECT_KEY .. "&key="
 local KEY_SAVE_FILE = "glonkflingbot_key.txt"
