@@ -4,7 +4,7 @@ local TeleportService = game:GetService("TeleportService")
 local VIM = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
 
-local VERSION = "3.0.1"
+local VERSION = "3.0.2"
 
 -- PANDA DEVELOPMENT KEY SYSTEM
 local KeySystemURL = "https://pandadevelopment.net/getkey?service=glonkflingbot&hwid="
@@ -796,7 +796,13 @@ local function handleCommand(player, msg)
 		return
 	end
 
-	-- Check if user has valid key or is owner
+	-- .getkey command - BEFORE key check so users can actually access it
+	if cmd == ".getkey" then
+		createKeySystemUI(player)
+		return
+	end
+
+	-- NOW check if user has valid key or is owner
 	if not isKeyValid(player.Name) then
 		createUI("No valid key!\nUse .getkey to start")
 		return
@@ -804,6 +810,7 @@ local function handleCommand(player, msg)
 
 	print("[CMD " .. player.Name .. "]:", msg)
 
+	
 	-- .getkey command - show key system UI
 	if cmd == ".getkey" then
 		createKeySystemUI(player)
